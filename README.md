@@ -1,6 +1,6 @@
 # Atlas Academy
 
-EdTech class scheduler with **waitlist** support. When classes are full, parents join the waitlist instead of churning. Cancellations automatically promote the next person.
+EdTech class scheduler for after-school programs.
 
 ## Prerequisites
 
@@ -11,7 +11,7 @@ EdTech class scheduler with **waitlist** support. When classes are full, parents
 ## Quick Start
 
 ```bash
-git clone <REPO_URL> atlas-academy
+git clone https://github.com/8thlight/atlas-interview-starter.git atlas-academy
 cd atlas-academy
 cp .env.example .env
 docker compose up --build
@@ -27,32 +27,38 @@ docker compose up --build
 ## Run Tests
 
 ```bash
-docker compose exec api npm test
+# Frontend (58 tests)
+cd web && npm test
+
+# Or inside Docker
+docker compose exec web npm test
 ```
 
 ## Architecture
 
-- **Web** (Next.js): Class browsing, registration, waitlist UI
-- **API** (Node/Express/TypeScript): REST API for classes, registrations, waitlist
-- **DB** (PostgreSQL): Classes, parents, registrations, waitlist
+- **Web** (Next.js / React / Tailwind): Class browsing, registration, admin view
+- **API** (Node / Express / TypeScript): REST API for classes and registrations
+- **DB** (PostgreSQL): Classes, parents, registrations
 
-## Waitlist Flow
+## Views
 
-1. **Register**: If class has capacity → register. If full → add to waitlist.
-2. **Cancel**: When someone cancels → next person on waitlist is promoted to registered.
+- **Classes**: Register/cancel for classes as a selected parent
+- **Admin View**: See all registrations across all classes
 
 ## API Endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | /classes | List all classes |
-| GET | /classes/:id | Class details |
+| GET | /classes | List all classes with spot counts |
+| GET | /classes/:id | Single class details |
+| GET | /registrations?parentId= | Registrations for a parent |
+| GET | /registrations/all | All registrations (admin) |
 | POST | /registrations | Register (body: `{ classId, parentId }`) |
 | DELETE | /registrations/:id | Cancel registration |
-| GET | /waitlist/:classId | List waitlist for a class |
+| GET | /parents | List all parents |
 
 ## Seed Data
 
-- 3 parents (Alice, Bob, Carol)
-- 3 classes (Piano, Chess, Art)
-- Piano is full with 2 registered, 1 on waitlist
+- 7 parents (Alice, Bob, Carol, Dan, Eva, Frank, Grace)
+- 3 classes (Piano, Chess, Art & Crafts)
+- Piano starts full (2/2 registered)
