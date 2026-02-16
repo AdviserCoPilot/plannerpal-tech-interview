@@ -1,0 +1,152 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  db-seed:
+    name: DB Seed Script
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: atlas
+          POSTGRES_PASSWORD: atlas
+          POSTGRES_DB: atlas_academy
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U atlas -d atlas_academy"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply seed script
+        run: psql -f db/init.sql
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: atlas
+          PGPASSWORD: atlas
+          PGDATABASE: atlas_academy
+
+      - name: Verify tables exist
+        run: |
+          psql -c "SELECT count(*) FROM parents;"
+          psql -c "SELECT count(*) FROM classes;"
+          psql -c "SELECT count(*) FROM registrations;"
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: atlas
+          PGPASSWORD: atlas
+          PGDATABASE: atlas_academy
+
+      - name: Verify seed data counts
+        run: |
+          PARENTS=$(psql -t -c "SELECT count(*) FROM parents;" | xargs)
+          CLASSES=$(psql -t -c "SELECT count(*) FROM classes;" | xargs)
+          REGS=$(psql -t -c "SELECT count(*) FROM registrations;" | xargs)
+          echo "Parents: $PARENTS, Classes: $CLASSES, Registrations: $REGS"
+          [ "$PARENTS" -eq 7 ] || { echo "Expected 7 parents, got $PARENTS"; exit 1; }
+          [ "$CLASSES" -eq 3 ] || { echo "Expected 3 classes, got $CLASSES"; exit 1; }
+          [ "$REGS" -ge 1 ]   || { echo "Expected at least 1 registration"; exit 1; }
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: atlas
+          PGPASSWORD: atlas
+          PGDATABASE: atlas_academy
+
+      - name: Verify idempotent (re-run seed)
+        run: psql -f db/init.sql
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: atlas
+          PGPASSWORD: atlas
+          PGDATABASE: atlas_academy
+
+  api-typescript:
+    name: API – TypeScript
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api/typescript
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: api/typescript/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+
+  api-python:
+    name: API – Python
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api/python
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ".[dev]"
+      - run: pytest -v
+
+  api-java:
+    name: API – Java
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api/java
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - run: ./gradlew test
+
+  api-dotnet:
+    name: API – C#/.NET
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api/dotnet
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0"
+      - run: dotnet restore
+      - run: dotnet build --no-restore
+      - run: dotnet test --no-build --verbosity normal
+
+  web:
+    name: Web – Next.js
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
