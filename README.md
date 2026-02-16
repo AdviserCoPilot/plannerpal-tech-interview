@@ -1,6 +1,6 @@
 # Atlas Academy
 
-EdTech class scheduler for after-school programs.
+EdTech class scheduler for after-school programs. This is a starter repo for a pairing exercise -- pick your language and go.
 
 ## Prerequisites
 
@@ -14,7 +14,28 @@ EdTech class scheduler for after-school programs.
 git clone https://github.com/8thlight/atlas-interview-starter.git atlas-academy
 cd atlas-academy
 cp .env.example .env
-docker compose up --build
+```
+
+### Pick your language:
+
+**Node/TypeScript:**
+```bash
+docker compose -f docker-compose.node.yml up --build
+```
+
+**Python/Flask:**
+```bash
+docker compose -f docker-compose.python.yml up --build
+```
+
+**Java/Spring Boot:**
+```bash
+docker compose -f docker-compose.java.yml up --build
+```
+
+**C#/.NET:**
+```bash
+docker compose -f docker-compose.dotnet.yml up --build
 ```
 
 ## URLs
@@ -26,19 +47,53 @@ docker compose up --build
 
 ## Run Tests
 
+**Node:**
 ```bash
-# Frontend (58 tests)
-cd web && npm test
+cd api/node && npm install && npm test
+```
 
-# Or inside Docker
-docker compose exec web npm test
+**Python:**
+```bash
+cd api/python && pip install ".[dev]" && pytest
+```
+
+**Java (requires JDK 21+):**
+```bash
+cd api/java && ./gradlew test
+```
+
+**C#/.NET (requires .NET 9 SDK):**
+```bash
+cd api/dotnet && dotnet test
+```
+
+**Frontend (58 tests):**
+```bash
+cd web && npm install && npm test
 ```
 
 ## Architecture
 
 - **Web** (Next.js / React / Tailwind): Class browsing, registration, admin view
-- **API** (Node / Express / TypeScript): REST API for classes and registrations
+- **API**: REST API for classes and registrations (Node, Python, Java, or C# -- same endpoints)
 - **DB** (PostgreSQL): Classes, parents, registrations
+
+## Project Structure
+
+```
+├── api/
+│   ├── node/          # Express + TypeScript API
+│   ├── python/        # Flask API
+│   ├── java/          # Spring Boot API (Java 21, Gradle)
+│   └── dotnet/        # ASP.NET Core API (.NET 9)
+├── web/               # Next.js frontend
+├── db/
+│   └── init.sql       # Schema + seed data
+├── docker-compose.node.yml
+├── docker-compose.python.yml
+├── docker-compose.java.yml
+└── docker-compose.dotnet.yml
+```
 
 ## Views
 
@@ -49,13 +104,14 @@ docker compose exec web npm test
 
 | Method | Path | Description |
 |--------|------|-------------|
+| GET | /health | Health check |
 | GET | /classes | List all classes with spot counts |
 | GET | /classes/:id | Single class details |
+| GET | /parents | List all parents |
 | GET | /registrations?parentId= | Registrations for a parent |
 | GET | /registrations/all | All registrations (admin) |
-| POST | /registrations | Register (body: `{ classId, parentId }`) |
+| POST | /registrations | Register (`{ classId, parentId }`) |
 | DELETE | /registrations/:id | Cancel registration |
-| GET | /parents | List all parents |
 
 ## Seed Data
 

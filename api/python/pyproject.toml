@@ -1,0 +1,19 @@
+[project]
+name = "atlas-academy-api"
+version = "1.0.0"
+description = "Atlas Academy EdTech class scheduler API"
+requires-python = ">=3.12"
+dependencies = [
+    "flask==3.1.0",
+    "flask-cors==5.0.1",
+    "psycopg2-binary==2.9.10",
+    "gunicorn==23.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.4",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -46,6 +46,18 @@ htmlcov/
 venv/
 ENV/
 
+# .NET
+bin/
+obj/
+
+# Java / Gradle
+.gradle/
+api/java/build/
+!api/java/gradle/wrapper/gradle-wrapper.jar
+*.class
+*.jar
+!gradle/wrapper/*.jar
+
 # IDE
 .vscode/
 .idea/

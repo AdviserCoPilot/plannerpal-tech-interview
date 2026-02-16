@@ -1,18 +1,14 @@
 services:
   api:
-    build: ./api
+    build: ./api/java
     ports:
       - "4000:4000"
     environment:
-      - NODE_ENV=development
       - PORT=4000
       - DATABASE_URL=postgresql://atlas:atlas@db:5432/atlas_academy
     depends_on:
       db:
         condition: service_healthy
-    volumes:
-      - ./api:/app
-      - /app/node_modules
 
   web:
     build: ./web
