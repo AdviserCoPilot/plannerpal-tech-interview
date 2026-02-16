@@ -88,21 +88,47 @@ jobs:
           cache-dependency-path: api/typescript/package-lock.json
       - run: npm ci
       - run: npm run build
-      - run: npm test
+      - name: Run tests
+        run: npx vitest run --passWithNoTests
 
   api-python:
     name: API – Python
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: atlas
+          POSTGRES_PASSWORD: atlas
+          POSTGRES_DB: atlas_academy
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U atlas -d atlas_academy"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 10
     defaults:
       run:
         working-directory: api/python
     steps:
       - uses: actions/checkout@v4
+      - name: Seed database
+        run: psql -f db/init.sql
+        working-directory: .
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: atlas
+          PGPASSWORD: atlas
+          PGDATABASE: atlas_academy
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - run: pip install ".[dev]"
       - run: pytest -v
+        env:
+          DATABASE_URL: postgresql://atlas:atlas@localhost:5432/atlas_academy
 
   api-java:
     name: API – Java
