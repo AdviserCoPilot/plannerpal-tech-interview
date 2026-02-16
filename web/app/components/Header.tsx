@@ -65,7 +65,7 @@ export default function Header({
             }`}
           >
             <ListIcon />
-            Classes
+            Class View
           </button>
         </nav>
         <div className="flex items-center gap-4">

@@ -23,9 +23,9 @@ describe("Header", () => {
     expect(screen.getByText("Atlas Academy")).toBeInTheDocument();
   });
 
-  it("renders the Classes nav button", () => {
+  it("renders the Class View nav button", () => {
     render(<Header {...defaultProps} />);
-    expect(screen.getByText("Classes")).toBeInTheDocument();
+    expect(screen.getByText("Class View")).toBeInTheDocument();
   });
 
   it("renders the Admin View nav button", () => {
@@ -33,9 +33,9 @@ describe("Header", () => {
     expect(screen.getByText("Admin View")).toBeInTheDocument();
   });
 
-  it("highlights Classes when view is classes", () => {
+  it("highlights Class View when view is classes", () => {
     render(<Header {...defaultProps} view="classes" />);
-    const classesBtn = screen.getByText("Classes").closest("button");
+    const classesBtn = screen.getByText("Class View").closest("button");
     expect(classesBtn?.className).toContain("bg-violet-600");
   });
 
@@ -53,11 +53,11 @@ describe("Header", () => {
     expect(onViewChange).toHaveBeenCalledWith("admin");
   });
 
-  it("calls onViewChange when Classes is clicked", async () => {
+  it("calls onViewChange when Class View is clicked", async () => {
     const user = userEvent.setup();
     const onViewChange = vi.fn();
     render(<Header {...defaultProps} view="admin" onViewChange={onViewChange} />);
-    await user.click(screen.getByText("Classes"));
+    await user.click(screen.getByText("Class View"));
     expect(onViewChange).toHaveBeenCalledWith("classes");
   });
 
