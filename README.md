@@ -18,9 +18,9 @@ cp .env.example .env
 
 ### Pick your language:
 
-**Node/TypeScript:**
+**TypeScript:**
 ```bash
-docker compose -f docker-compose.node.yml up --build
+docker compose -f docker-compose.typescript.yml up --build
 ```
 
 **Python/Flask:**
@@ -47,9 +47,9 @@ docker compose -f docker-compose.dotnet.yml up --build
 
 ## Run Tests
 
-**Node:**
+**TypeScript:**
 ```bash
-cd api/node && npm install && npm test
+cd api/typescript && npm install && npm test
 ```
 
 **Python:**
@@ -75,21 +75,21 @@ cd web && npm install && npm test
 ## Architecture
 
 - **Web** (Next.js / React / Tailwind): Class browsing, registration, admin view
-- **API**: REST API for classes and registrations (Node, Python, Java, or C# -- same endpoints)
+- **API**: REST API for classes and registrations (TypeScript, Python, Java, or C# -- same endpoints)
 - **DB** (PostgreSQL): Classes, parents, registrations
 
 ## Project Structure
 
 ```
 ├── api/
-│   ├── node/          # Express + TypeScript API
+│   ├── typescript/    # Express + TypeScript API
 │   ├── python/        # Flask API
 │   ├── java/          # Spring Boot API (Java 21, Gradle)
 │   └── dotnet/        # ASP.NET Core API (.NET 9)
 ├── web/               # Next.js frontend
 ├── db/
 │   └── init.sql       # Schema + seed data
-├── docker-compose.node.yml
+├── docker-compose.typescript.yml
 ├── docker-compose.python.yml
 ├── docker-compose.java.yml
 └── docker-compose.dotnet.yml
