@@ -98,7 +98,7 @@ def create_registration():
             )
             registered_count = int(cur.fetchone()["count"])
 
-            if registered_count >= capacity:
+            if registered_count > capacity:
                 return jsonify({"error": "Class is full"}), 409
 
             cur.execute(

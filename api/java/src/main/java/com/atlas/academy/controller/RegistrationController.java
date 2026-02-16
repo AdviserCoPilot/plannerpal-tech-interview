@@ -73,7 +73,7 @@ public class RegistrationController {
             }
 
             long currentCount = registrationRepo.countRegistered(classId);
-            if (currentCount >= capacity) {
+            if (currentCount > capacity) {
                 return ResponseEntity.status(409)
                         .body(Map.of("error", "Class is full"));
             }

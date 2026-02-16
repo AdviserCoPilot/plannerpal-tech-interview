@@ -66,7 +66,7 @@ registrationsRouter.post("/", async (req, res) => {
     );
     const registeredCount = parseInt(regCount.rows[0].count, 10);
 
-    if (registeredCount >= capacity) {
+    if (registeredCount > capacity) {
       return res.status(409).json({ error: "Class is full" });
     }
 

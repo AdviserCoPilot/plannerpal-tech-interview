@@ -59,7 +59,7 @@ public class RegistrationsController(IAtlasRepository repo) : ControllerBase
                 return NotFound(new { error = "Class not found" });
 
             var currentCount = await repo.CountRegisteredAsync(classId);
-            if (currentCount >= capacity)
+            if (currentCount > capacity)
                 return Conflict(new { error = "Class is full" });
 
             await repo.RegisterAsync(classId, parentId);
