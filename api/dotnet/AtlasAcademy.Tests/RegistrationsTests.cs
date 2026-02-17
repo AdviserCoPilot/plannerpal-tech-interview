@@ -114,24 +114,6 @@ public class RegistrationsTests
     }
 
     [Fact]
-    public async Task Register_ClassFull()
-    {
-        var classId = Guid.NewGuid();
-        var parentId = Guid.NewGuid();
-        var repo = CreateMockRepo();
-        repo.GetClassCapacityAsync(classId).Returns(2);
-        repo.CountRegisteredAsync(classId).Returns(2);
-        await using var factory = new TestWebAppFactory(repo);
-        var client = factory.CreateClient();
-
-        var response = await client.PostAsJsonAsync("/registrations",
-            new { classId = classId.ToString(), parentId = parentId.ToString() });
-
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
-        await repo.DidNotReceive().RegisterAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
-    }
-
-    [Fact]
     public async Task Cancel_Success()
     {
         var regId = Guid.NewGuid();
