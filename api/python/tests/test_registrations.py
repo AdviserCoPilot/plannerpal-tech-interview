@@ -52,6 +52,18 @@ def test_register_success(client):
     assert data["status"] == "registered"
 
 
+def test_register_full_class(client):
+    response = client.post(
+        "/registrations",
+        json={
+            "classId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            "parentId": "33333333-3333-3333-3333-333333333333",
+        },
+    )
+    assert response.status_code == 409
+    assert response.get_json()["error"] == "Class is full"
+
+
 def test_cancel_not_found(client):
     response = client.delete(
         "/registrations/00000000-0000-0000-0000-000000000000"

@@ -114,6 +114,24 @@ class RegistrationControllerTest {
     }
 
     @Test
+    void registerClassFull() throws Exception {
+        UUID classId = UUID.randomUUID();
+        UUID parentId = UUID.randomUUID();
+        when(classRepo.getCapacity(classId)).thenReturn(2);
+        when(registrationRepo.countRegistered(classId)).thenReturn(2L);
+
+        mockMvc.perform(post("/registrations")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"classId": "%s", "parentId": "%s"}
+                                """.formatted(classId, parentId)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("Class is full"));
+
+        verify(registrationRepo, never()).register(any(), any());
+    }
+
+    @Test
     void cancelSuccess() throws Exception {
         UUID regId = UUID.randomUUID();
         when(registrationRepo.existsActive(regId)).thenReturn(true);
