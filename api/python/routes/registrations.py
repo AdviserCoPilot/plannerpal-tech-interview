@@ -1,8 +1,14 @@
-from flask import Blueprint, jsonify, request
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
 from db import get_pool
 
-registrations_bp = Blueprint("registrations", __name__)
+router = APIRouter()
+
+
+class CreateRegistrationRequest(BaseModel):
+    classId: str
+    parentId: str
 
 
 def _serialize(row):
@@ -13,13 +19,9 @@ def _serialize(row):
     return result
 
 
-@registrations_bp.route("/registrations")
-def get_registrations():
+@router.get("/registrations")
+def get_registrations(parentId: str):
     try:
-        parent_id = request.args.get("parentId")
-        if not parent_id:
-            return jsonify({"error": "parentId required"}), 400
-
         conn = get_pool()
         try:
             from psycopg2.extras import RealDictCursor
@@ -31,18 +33,20 @@ def get_registrations():
                        JOIN classes c ON c.id = r.class_id
                        WHERE r.parent_id = %s AND r.status = 'registered'
                        ORDER BY c.start_time""",
-                    (parent_id,),
+                    (parentId,),
                 )
                 rows = cur.fetchall()
-            return jsonify({"registrations": [_serialize(r) for r in rows]})
+            return {"registrations": [_serialize(r) for r in rows]}
         finally:
             conn.close()
+    except HTTPException:
+        raise
     except Exception as e:
         print(e)
-        return jsonify({"error": "Failed to fetch registrations"}), 500
+        raise HTTPException(status_code=500, detail="Failed to fetch registrations")
 
 
-@registrations_bp.route("/registrations/all")
+@router.get("/registrations/all")
 def get_all_registrations():
     try:
         conn = get_pool()
@@ -61,26 +65,24 @@ def get_all_registrations():
                        ORDER BY c.start_time, p.name"""
                 )
                 rows = cur.fetchall()
-            return jsonify([_serialize(r) for r in rows])
+            return [_serialize(r) for r in rows]
         finally:
             conn.close()
+    except HTTPException:
+        raise
     except Exception as e:
         print(e)
-        return jsonify({"error": "Failed to fetch all registrations"}), 500
+        raise HTTPException(status_code=500, detail="Failed to fetch all registrations")
 
 
-@registrations_bp.route("/registrations", methods=["POST"])
-def create_registration():
+@router.post("/registrations", status_code=201)
+def create_registration(body: CreateRegistrationRequest):
     conn = get_pool()
     try:
         from psycopg2.extras import RealDictCursor
 
-        data = request.get_json()
-        class_id = data.get("classId")
-        parent_id = data.get("parentId")
-
-        if not class_id or not parent_id:
-            return jsonify({"error": "classId and parentId required"}), 400
+        class_id = body.classId
+        parent_id = body.parentId
 
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
@@ -88,7 +90,7 @@ def create_registration():
             )
             row = cur.fetchone()
             if not row:
-                return jsonify({"error": "Class not found"}), 404
+                raise HTTPException(status_code=404, detail="Class not found")
             capacity = int(row["capacity"])
 
             cur.execute(
@@ -99,7 +101,7 @@ def create_registration():
             registered_count = int(cur.fetchone()["count"])
 
             if registered_count >= capacity:
-                return jsonify({"error": "Class is full"}), 409
+                raise HTTPException(status_code=409, detail="Class is full")
 
             cur.execute(
                 """INSERT INTO registrations (class_id, parent_id, status)
@@ -110,25 +112,23 @@ def create_registration():
             )
             conn.commit()
 
-        return (
-            jsonify(
-                {
-                    "status": "registered",
-                    "message": "Successfully registered for class",
-                }
-            ),
-            201,
-        )
+        return {
+            "status": "registered",
+            "message": "Successfully registered for class",
+        }
+    except HTTPException:
+        conn.rollback()
+        raise
     except Exception as e:
         conn.rollback()
         print(e)
-        return jsonify({"error": "Failed to register"}), 500
+        raise HTTPException(status_code=500, detail="Failed to register")
     finally:
         conn.close()
 
 
-@registrations_bp.route("/registrations/<reg_id>", methods=["DELETE"])
-def cancel_registration(reg_id):
+@router.delete("/registrations/{reg_id}", status_code=204)
+def cancel_registration(reg_id: str):
     try:
         conn = get_pool()
         try:
@@ -141,17 +141,17 @@ def cancel_registration(reg_id):
                 )
                 reg = cur.fetchone()
                 if not reg:
-                    return jsonify({"error": "Registration not found"}), 404
+                    raise HTTPException(status_code=404, detail="Registration not found")
 
                 cur.execute(
                     "UPDATE registrations SET status = 'cancelled' WHERE id = %s",
                     (reg_id,),
                 )
                 conn.commit()
-
-            return jsonify({"message": "Registration cancelled"})
         finally:
             conn.close()
+    except HTTPException:
+        raise
     except Exception as e:
         print(e)
-        return jsonify({"error": "Failed to cancel"}), 500
+        raise HTTPException(status_code=500, detail="Failed to cancel")

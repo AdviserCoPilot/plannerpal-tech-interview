@@ -1,14 +1,8 @@
 import pytest
-
-from app import app as flask_app
-
-
-@pytest.fixture
-def app():
-    flask_app.config["TESTING"] = True
-    yield flask_app
-
+from fastapi.testclient import TestClient
+from app import app
 
 @pytest.fixture
-def client(app):
-    return app.test_client()
+def client():
+    with TestClient(app) as c:
+        yield c

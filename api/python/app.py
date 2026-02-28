@@ -1,26 +1,21 @@
 import os
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from routes.classes import router as classes_router
+from routes.parents import router as parents_router
+from routes.registrations import router as registrations_router
 
-from flask import Flask
-from flask_cors import CORS
+app = FastAPI()
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.include_router(classes_router)
+app.include_router(parents_router)
+app.include_router(registrations_router)
 
-from db import get_pool
-from routes.classes import classes_bp
-from routes.parents import parents_bp
-from routes.registrations import registrations_bp
-
-app = Flask(__name__)
-CORS(app)
-
-app.register_blueprint(classes_bp)
-app.register_blueprint(parents_bp)
-app.register_blueprint(registrations_bp)
-
-
-@app.route("/health")
+@app.get("/health")
 def health():
     return {"status": "ok"}
 
-
 if __name__ == "__main__":
+    import uvicorn
     port = int(os.environ.get("PORT", 4000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    uvicorn.run("app:app", host="0.0.0.0", port=port, reload=True)

@@ -1,7 +1,6 @@
 def test_get_registrations_requires_parent_id(client):
     response = client.get("/registrations")
-    assert response.status_code == 400
-    assert response.get_json()["error"] == "parentId required"
+    assert response.status_code == 422
 
 
 def test_get_registrations_with_parent_id(client):

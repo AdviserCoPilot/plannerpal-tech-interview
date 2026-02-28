@@ -1,11 +1,11 @@
-from flask import Blueprint, jsonify
+from fastapi import APIRouter, HTTPException
 
 from db import query
 
-classes_bp = Blueprint("classes", __name__)
+router = APIRouter()
 
 
-@classes_bp.route("/classes")
+@router.get("/classes")
 def list_classes():
     try:
         rows = query("""
@@ -15,14 +15,16 @@ def list_classes():
             FROM classes c
             ORDER BY c.start_time ASC
         """)
-        return jsonify(_serialize_rows(rows))
+        return _serialize_rows(rows)
+    except HTTPException:
+        raise
     except Exception as e:
         print(e)
-        return jsonify({"error": "Failed to fetch classes"}), 500
+        raise HTTPException(status_code=500, detail="Failed to fetch classes")
 
 
-@classes_bp.route("/classes/<class_id>")
-def get_class(class_id):
+@router.get("/classes/{class_id}")
+def get_class(class_id: str):
     try:
         rows = query(
             """
@@ -35,11 +37,13 @@ def get_class(class_id):
             (class_id,),
         )
         if not rows:
-            return jsonify({"error": "Class not found"}), 404
-        return jsonify(_serialize_row(rows[0]))
+            raise HTTPException(status_code=404, detail="Class not found")
+        return _serialize_row(rows[0])
+    except HTTPException:
+        raise
     except Exception as e:
         print(e)
-        return jsonify({"error": "Failed to fetch class"}), 500
+        raise HTTPException(status_code=500, detail="Failed to fetch class")
 
 
 def _serialize_row(row):
