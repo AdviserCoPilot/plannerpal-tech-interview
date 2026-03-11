@@ -66,3 +66,6 @@ api/java/build/
 
 # Ruff
 .ruff_cache/
+
+# Worktrees
+.worktrees/

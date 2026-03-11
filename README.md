@@ -23,7 +23,7 @@ cp .env.example .env
 docker compose -f docker-compose.typescript.yml up --build
 ```
 
-**Python/Flask:**
+**Python/FastAPI:**
 ```bash
 docker compose -f docker-compose.python.yml up --build
 ```
@@ -83,12 +83,10 @@ cd web && npm install && npm test
 ```
 ├── api/
 │   ├── typescript/    # Express + TypeScript API
-│   ├── python/        # Flask API
+│   ├── python/        # FastAPI API
 │   ├── java/          # Spring Boot API (Java 21, Gradle)
 │   └── dotnet/        # ASP.NET Core API (.NET 9)
 ├── web/               # Next.js frontend
-├── db/
-│   └── init.sql       # Schema + seed data
 ├── docker-compose.typescript.yml
 ├── docker-compose.python.yml
 ├── docker-compose.java.yml

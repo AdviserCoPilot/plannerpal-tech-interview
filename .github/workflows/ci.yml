@@ -7,72 +7,6 @@ on:
     branches: [main]
 
 jobs:
-  db-seed:
-    name: DB Seed Script
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: atlas
-          POSTGRES_PASSWORD: atlas
-          POSTGRES_DB: atlas_academy
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U atlas -d atlas_academy"
-          --health-interval 2s
-          --health-timeout 5s
-          --health-retries 10
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Apply seed script
-        run: psql -f db/init.sql
-        env:
-          PGHOST: localhost
-          PGPORT: 5432
-          PGUSER: atlas
-          PGPASSWORD: atlas
-          PGDATABASE: atlas_academy
-
-      - name: Verify tables exist
-        run: |
-          psql -c "SELECT count(*) FROM parents;"
-          psql -c "SELECT count(*) FROM classes;"
-          psql -c "SELECT count(*) FROM registrations;"
-        env:
-          PGHOST: localhost
-          PGPORT: 5432
-          PGUSER: atlas
-          PGPASSWORD: atlas
-          PGDATABASE: atlas_academy
-
-      - name: Verify seed data counts
-        run: |
-          PARENTS=$(psql -t -c "SELECT count(*) FROM parents;" | xargs)
-          CLASSES=$(psql -t -c "SELECT count(*) FROM classes;" | xargs)
-          REGS=$(psql -t -c "SELECT count(*) FROM registrations;" | xargs)
-          echo "Parents: $PARENTS, Classes: $CLASSES, Registrations: $REGS"
-          [ "$PARENTS" -eq 7 ] || { echo "Expected 7 parents, got $PARENTS"; exit 1; }
-          [ "$CLASSES" -eq 3 ] || { echo "Expected 3 classes, got $CLASSES"; exit 1; }
-          [ "$REGS" -ge 1 ]   || { echo "Expected at least 1 registration"; exit 1; }
-        env:
-          PGHOST: localhost
-          PGPORT: 5432
-          PGUSER: atlas
-          PGPASSWORD: atlas
-          PGDATABASE: atlas_academy
-
-      - name: Verify idempotent (re-run seed)
-        run: psql -f db/init.sql
-        env:
-          PGHOST: localhost
-          PGPORT: 5432
-          PGUSER: atlas
-          PGPASSWORD: atlas
-          PGDATABASE: atlas_academy
-
   api-typescript:
     name: API – TypeScript
     runs-on: ubuntu-latest
@@ -113,15 +47,6 @@ jobs:
         working-directory: api/python
     steps:
       - uses: actions/checkout@v4
-      - name: Seed database
-        run: psql -f db/init.sql
-        working-directory: .
-        env:
-          PGHOST: localhost
-          PGPORT: 5432
-          PGUSER: atlas
-          PGPASSWORD: atlas
-          PGDATABASE: atlas_academy
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
