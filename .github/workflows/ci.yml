@@ -89,7 +89,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Run tests
-        run: npx vitest run --passWithNoTests
+        run: npx vitest run
 
   api-python:
     name: API – Python

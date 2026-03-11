@@ -1,7 +1,7 @@
 def test_list_parents(client):
     response = client.get("/parents")
     assert response.status_code == 200
-    data = response.get_json()
+    data = response.json()
     assert isinstance(data, list)
     if len(data) > 0:
         assert "name" in data[0]
