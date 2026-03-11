@@ -1,5 +1,6 @@
 using System.Text.Json;
 using AtlasAcademy.Api.Data;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,7 +18,10 @@ builder.Services.AddCors(options =>
 
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 var connectionString = ParseConnectionString(databaseUrl);
-builder.Services.AddSingleton<IAtlasRepository>(new PostgresRepository(connectionString));
+
+builder.Services.AddDbContext<AtlasDbContext>(options =>
+    options.UseNpgsql(connectionString));
+builder.Services.AddScoped<IAtlasRepository, PostgresRepository>();
 
 var port = Environment.GetEnvironmentVariable("PORT") ?? "4000";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");

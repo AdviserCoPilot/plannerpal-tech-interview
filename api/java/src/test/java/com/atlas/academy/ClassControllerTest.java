@@ -2,7 +2,8 @@ package com.atlas.academy;
 
 import com.atlas.academy.controller.ClassController;
 import com.atlas.academy.model.ClassEntity;
-import com.atlas.academy.repository.ClassRepository;
+import com.atlas.academy.repository.ClassJpaRepository;
+import com.atlas.academy.repository.RegistrationJpaRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -25,7 +26,10 @@ class ClassControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private ClassRepository classRepo;
+    private ClassJpaRepository classRepo;
+
+    @MockitoBean
+    private RegistrationJpaRepository registrationRepo;
 
     private ClassEntity sampleClass() {
         return new ClassEntity(
@@ -35,14 +39,15 @@ class ClassControllerTest {
                 20,
                 OffsetDateTime.now(),
                 OffsetDateTime.now().plusHours(1),
-                OffsetDateTime.now(),
-                5
+                OffsetDateTime.now()
         );
     }
 
     @Test
     void listClasses() throws Exception {
-        when(classRepo.findAll()).thenReturn(List.of(sampleClass()));
+        ClassEntity cls = sampleClass();
+        when(classRepo.findAllByOrderByStartTimeAsc()).thenReturn(List.of(cls));
+        when(registrationRepo.countByClassEntityIdAndStatus(cls.getId(), "registered")).thenReturn(5L);
 
         mockMvc.perform(get("/classes"))
                 .andExpect(status().isOk())
@@ -54,9 +59,10 @@ class ClassControllerTest {
     @Test
     void getClassById() throws Exception {
         ClassEntity cls = sampleClass();
-        when(classRepo.findById(cls.id())).thenReturn(Optional.of(cls));
+        when(classRepo.findById(cls.getId())).thenReturn(Optional.of(cls));
+        when(registrationRepo.countByClassEntityIdAndStatus(cls.getId(), "registered")).thenReturn(0L);
 
-        mockMvc.perform(get("/classes/" + cls.id()))
+        mockMvc.perform(get("/classes/" + cls.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Yoga 101"));
     }

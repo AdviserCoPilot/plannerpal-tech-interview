@@ -1,6 +1,8 @@
-import { Pool } from "pg";
+import knex from "knex";
 
-const connectionString =
-  process.env.DATABASE_URL || "postgresql://atlas:atlas@localhost:5432/atlas_academy";
+const db = knex({
+  client: "pg",
+  connection: process.env.DATABASE_URL || "postgresql://atlas:atlas@localhost:5432/atlas_academy",
+});
 
-export const pool = new Pool({ connectionString });
+export default db;

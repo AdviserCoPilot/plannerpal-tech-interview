@@ -1,7 +1,7 @@
 package com.atlas.academy.controller;
 
 import com.atlas.academy.model.Parent;
-import com.atlas.academy.repository.ParentRepository;
+import com.atlas.academy.repository.ParentJpaRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,16 +14,16 @@ import java.util.Map;
 @RequestMapping("/parents")
 public class ParentController {
 
-    private final ParentRepository repo;
+    private final ParentJpaRepository repo;
 
-    public ParentController(ParentRepository repo) {
+    public ParentController(ParentJpaRepository repo) {
         this.repo = repo;
     }
 
     @GetMapping
     public ResponseEntity<?> list() {
         try {
-            List<Parent> parents = repo.findAll();
+            List<Parent> parents = repo.findAllByOrderByNameAsc();
             return ResponseEntity.ok(parents);
         } catch (Exception e) {
             return ResponseEntity.internalServerError()

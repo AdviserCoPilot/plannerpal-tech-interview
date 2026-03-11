@@ -1,16 +1,74 @@
 import request from "supertest";
-import app from "../app";
-import { pool } from "../db";
 import { vi } from "vitest";
 
-vi.mock("../db", () => ({
-  pool: { query: vi.fn(), connect: vi.fn() },
-}));
+let resolvedValue: any = undefined;
 
-const mockQuery = pool.query as ReturnType<typeof vi.fn>;
-const mockConnect = pool.connect as ReturnType<typeof vi.fn>;
+const { knexInstance, chain } = vi.hoisted(() => {
+  const _chain: any = {};
+  const methods = [
+    "select", "where", "andWhere", "orderBy", "join",
+    "first", "insert", "update", "count", "onConflict", "merge",
+    "del", "from",
+  ];
+  for (const m of methods) {
+    _chain[m] = vi.fn(() => _chain);
+  }
+  _chain.as = vi.fn(() => _chain);
+  _chain.then = undefined as any;
 
-afterEach(() => vi.clearAllMocks());
+  const _knexInstance: any = vi.fn(() => _chain);
+  for (const m of methods) {
+    _knexInstance[m] = _chain[m];
+  }
+  _knexInstance.as = _chain.as;
+  _knexInstance.raw = vi.fn((val: string) => val);
+  _knexInstance.transaction = vi.fn();
+
+  return { knexInstance: _knexInstance, chain: _chain };
+});
+
+chain.then = function (resolve: any, reject: any) {
+  return Promise.resolve(resolvedValue).then(resolve, reject);
+};
+
+vi.mock("../db", () => ({ default: knexInstance }));
+
+import app from "../app";
+
+function setResolved(val: any) { resolvedValue = val; }
+
+afterEach(() => {
+  vi.clearAllMocks();
+  resolvedValue = undefined;
+});
+
+function createTrxMock() {
+  const trxChain: any = {};
+  let trxResolved: any = undefined;
+  const trxMethods = [
+    "select", "where", "andWhere", "orderBy", "join",
+    "insert", "update", "count", "onConflict", "merge",
+    "del", "from",
+  ];
+  for (const m of trxMethods) {
+    trxChain[m] = vi.fn(() => trxChain);
+  }
+  trxChain.first = vi.fn(() => trxChain);
+  trxChain.then = function (resolve: any, reject: any) {
+    return Promise.resolve(trxResolved).then(resolve, reject);
+  };
+
+  const trx: any = vi.fn(() => trxChain);
+  for (const m of Object.keys(trxChain)) {
+    trx[m] = trxChain[m];
+  }
+
+  return {
+    trx,
+    trxChain,
+    setTrxResolved: (val: any) => { trxResolved = val; },
+  };
+}
 
 describe("GET /registrations", () => {
   it("requires parentId", async () => {
@@ -20,16 +78,14 @@ describe("GET /registrations", () => {
   });
 
   it("returns registrations for a parent", async () => {
-    mockQuery.mockResolvedValueOnce({
-      rows: [
-        {
-          id: "rrrrrrrr-rrrr-rrrr-rrrr-rrrrrrrrrrrr",
-          class_id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-          status: "registered",
-          class_name: "Piano",
-        },
-      ],
-    });
+    setResolved([
+      {
+        id: "rrrrrrrr-rrrr-rrrr-rrrr-rrrrrrrrrrrr",
+        class_id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        status: "registered",
+        class_name: "Piano",
+      },
+    ]);
 
     const res = await request(app).get(
       "/registrations?parentId=11111111-1111-1111-1111-111111111111"
@@ -42,18 +98,16 @@ describe("GET /registrations", () => {
 
 describe("GET /registrations/all", () => {
   it("returns all registrations", async () => {
-    mockQuery.mockResolvedValueOnce({
-      rows: [
-        {
-          id: "rrrrrrrr-rrrr-rrrr-rrrr-rrrrrrrrrrrr",
-          class_id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-          class_name: "Piano",
-          parent_name: "Alice Smith",
-          parent_email: "alice@example.com",
-          created_at: "2025-01-01T00:00:00.000Z",
-        },
-      ],
-    });
+    setResolved([
+      {
+        id: "rrrrrrrr-rrrr-rrrr-rrrr-rrrrrrrrrrrr",
+        class_id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        class_name: "Piano",
+        parent_name: "Alice Smith",
+        parent_email: "alice@example.com",
+        created_at: "2025-01-01T00:00:00.000Z",
+      },
+    ]);
 
     const res = await request(app).get("/registrations/all");
     expect(res.status).toBe(200);
@@ -64,15 +118,6 @@ describe("GET /registrations/all", () => {
 });
 
 describe("POST /registrations", () => {
-  const mockClient = {
-    query: vi.fn(),
-    release: vi.fn(),
-  };
-
-  beforeEach(() => {
-    mockConnect.mockResolvedValue(mockClient);
-  });
-
   it("requires classId and parentId", async () => {
     const res = await request(app).post("/registrations").send({});
     expect(res.status).toBe(400);
@@ -80,7 +125,11 @@ describe("POST /registrations", () => {
   });
 
   it("returns 404 when class not found", async () => {
-    mockClient.query.mockResolvedValueOnce({ rows: [] });
+    knexInstance.transaction.mockImplementation(async (cb: any) => {
+      const { trx, setTrxResolved } = createTrxMock();
+      setTrxResolved(undefined); // first() returns undefined = class not found
+      return cb(trx);
+    });
 
     const res = await request(app).post("/registrations").send({
       classId: "00000000-0000-0000-0000-000000000000",
@@ -91,10 +140,39 @@ describe("POST /registrations", () => {
   });
 
   it("registers successfully", async () => {
-    mockClient.query
-      .mockResolvedValueOnce({ rows: [{ capacity: 20 }] })
-      .mockResolvedValueOnce({ rows: [{ count: "5" }] })
-      .mockResolvedValueOnce({ rows: [] });
+    knexInstance.transaction.mockImplementation(async (cb: any) => {
+      let firstCallCount = 0;
+      const trxChain: any = {};
+      let trxResolved: any = undefined;
+      const trxMethods = [
+        "select", "where", "andWhere", "orderBy", "join",
+        "insert", "update", "count", "onConflict", "merge",
+        "del", "from",
+      ];
+      for (const m of trxMethods) {
+        trxChain[m] = vi.fn(() => trxChain);
+      }
+      trxChain.first = vi.fn(() => {
+        firstCallCount++;
+        if (firstCallCount === 1) {
+          trxResolved = { capacity: 20 };
+        } else if (firstCallCount === 2) {
+          trxResolved = { count: "5" };
+        }
+        return trxChain;
+      });
+      trxChain.then = function (resolve: any, reject: any) {
+        return Promise.resolve(trxResolved).then(resolve, reject);
+      };
+      const trx: any = vi.fn(() => {
+        trxResolved = undefined;
+        return trxChain;
+      });
+      for (const m of Object.keys(trxChain)) {
+        trx[m] = trxChain[m];
+      }
+      return cb(trx);
+    });
 
     const res = await request(app).post("/registrations").send({
       classId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
@@ -106,9 +184,39 @@ describe("POST /registrations", () => {
   });
 
   it("returns 409 when class is full", async () => {
-    mockClient.query
-      .mockResolvedValueOnce({ rows: [{ capacity: 2 }] })
-      .mockResolvedValueOnce({ rows: [{ count: "2" }] });
+    knexInstance.transaction.mockImplementation(async (cb: any) => {
+      let firstCallCount = 0;
+      const trxChain: any = {};
+      let trxResolved: any = undefined;
+      const trxMethods = [
+        "select", "where", "andWhere", "orderBy", "join",
+        "insert", "update", "count", "onConflict", "merge",
+        "del", "from",
+      ];
+      for (const m of trxMethods) {
+        trxChain[m] = vi.fn(() => trxChain);
+      }
+      trxChain.first = vi.fn(() => {
+        firstCallCount++;
+        if (firstCallCount === 1) {
+          trxResolved = { capacity: 2 };
+        } else if (firstCallCount === 2) {
+          trxResolved = { count: "2" };
+        }
+        return trxChain;
+      });
+      trxChain.then = function (resolve: any, reject: any) {
+        return Promise.resolve(trxResolved).then(resolve, reject);
+      };
+      const trx: any = vi.fn(() => {
+        trxResolved = undefined;
+        return trxChain;
+      });
+      for (const m of Object.keys(trxChain)) {
+        trx[m] = trxChain[m];
+      }
+      return cb(trx);
+    });
 
     const res = await request(app).post("/registrations").send({
       classId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
@@ -121,7 +229,7 @@ describe("POST /registrations", () => {
 
 describe("DELETE /registrations/:id", () => {
   it("returns 404 when registration not found", async () => {
-    mockQuery.mockResolvedValueOnce({ rows: [] });
+    setResolved(undefined);
 
     const res = await request(app).delete(
       "/registrations/00000000-0000-0000-0000-000000000000"
@@ -131,11 +239,7 @@ describe("DELETE /registrations/:id", () => {
   });
 
   it("cancels a registration", async () => {
-    mockQuery
-      .mockResolvedValueOnce({
-        rows: [{ id: "rrrrrrrr-rrrr-rrrr-rrrr-rrrrrrrrrrrr", status: "registered" }],
-      })
-      .mockResolvedValueOnce({ rows: [] });
+    setResolved({ id: "rrrrrrrr-rrrr-rrrr-rrrr-rrrrrrrrrrrr", status: "registered" });
 
     const res = await request(app).delete(
       "/registrations/rrrrrrrr-rrrr-rrrr-rrrr-rrrrrrrrrrrr"

@@ -1,40 +1,20 @@
 import os
+from collections.abc import Generator
 
-import psycopg2
-from psycopg2.extras import RealDictCursor
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
 
 DATABASE_URL = os.environ.get(
     "DATABASE_URL", "postgresql://atlas:atlas@localhost:5432/atlas_academy"
 )
 
-
-def get_pool():
-    return psycopg2.connect(DATABASE_URL)
-
-
-def get_cursor():
-    conn = get_pool()
-    conn.autocommit = False
-    return conn, conn.cursor(cursor_factory=RealDictCursor)
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(bind=engine)
 
 
-def query(sql, params=None):
-    conn = get_pool()
+def get_db() -> Generator[Session, None, None]:
+    db = SessionLocal()
     try:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(sql, params)
-            if cur.description:
-                return cur.fetchall()
-            return []
+        yield db
     finally:
-        conn.close()
-
-
-def execute(sql, params=None):
-    conn = get_pool()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(sql, params)
-            conn.commit()
-    finally:
-        conn.close()
+        db.close()

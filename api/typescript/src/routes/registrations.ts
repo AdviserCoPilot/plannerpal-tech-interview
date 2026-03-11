@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { pool } from "../db";
+import db from "../db";
 
 export const registrationsRouter = Router();
 
@@ -9,15 +9,13 @@ registrationsRouter.get("/", async (req, res) => {
     if (!parentId) {
       return res.status(400).json({ error: "parentId required" });
     }
-    const result = await pool.query(
-      `SELECT r.id, r.class_id, r.status, c.name as class_name
-       FROM registrations r
-       JOIN classes c ON c.id = r.class_id
-       WHERE r.parent_id = $1 AND r.status = 'registered'
-       ORDER BY c.start_time`,
-      [parentId]
-    );
-    res.json({ registrations: result.rows });
+    const registrations = await db("registrations as r")
+      .select("r.id", "r.class_id", "r.status", "c.name as class_name")
+      .join("classes as c", "c.id", "r.class_id")
+      .where("r.parent_id", parentId as string)
+      .andWhere("r.status", "registered")
+      .orderBy("c.start_time");
+    res.json({ registrations });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to fetch registrations" });
@@ -26,17 +24,21 @@ registrationsRouter.get("/", async (req, res) => {
 
 registrationsRouter.get("/all", async (_req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT r.id, r.class_id, c.name as class_name,
-              p.name as parent_name, p.email as parent_email,
-              r.created_at
-       FROM registrations r
-       JOIN classes c ON c.id = r.class_id
-       JOIN parents p ON p.id = r.parent_id
-       WHERE r.status = 'registered'
-       ORDER BY c.start_time, p.name`
-    );
-    res.json(result.rows);
+    const rows = await db("registrations as r")
+      .select(
+        "r.id",
+        "r.class_id",
+        "c.name as class_name",
+        "p.name as parent_name",
+        "p.email as parent_email",
+        "r.created_at"
+      )
+      .join("classes as c", "c.id", "r.class_id")
+      .join("parents as p", "p.id", "r.parent_id")
+      .where("r.status", "registered")
+      .orderBy("c.start_time")
+      .orderBy("p.name");
+    res.json(rows);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to fetch all registrations" });
@@ -44,66 +46,68 @@ registrationsRouter.get("/all", async (_req, res) => {
 });
 
 registrationsRouter.post("/", async (req, res) => {
-  const client = await pool.connect();
   try {
     const { classId, parentId } = req.body;
     if (!classId || !parentId) {
       return res.status(400).json({ error: "classId and parentId required" });
     }
 
-    const classResult = await client.query(
-      "SELECT capacity FROM classes WHERE id = $1",
-      [classId]
-    );
-    if (classResult.rows.length === 0) {
-      return res.status(404).json({ error: "Class not found" });
-    }
-    const capacity = parseInt(classResult.rows[0].capacity, 10);
+    await db.transaction(async (trx) => {
+      const classRow = await trx("classes")
+        .select("capacity")
+        .where("id", classId)
+        .first();
+      if (!classRow) {
+        return res.status(404).json({ error: "Class not found" });
+      }
+      const capacity = parseInt(classRow.capacity, 10);
 
-    const regCount = await client.query(
-      `SELECT COUNT(*) as count FROM registrations WHERE class_id = $1 AND status = 'registered'`,
-      [classId]
-    );
-    const registeredCount = parseInt(regCount.rows[0].count, 10);
+      const countResult = await trx("registrations")
+        .count("* as count")
+        .where("class_id", classId)
+        .andWhere("status", "registered")
+        .first();
+      const registeredCount = parseInt((countResult as any).count, 10);
 
-    if (registeredCount >= capacity) {
-      return res.status(409).json({ error: "Class is full" });
-    }
+      if (registeredCount >= capacity) {
+        return res.status(409).json({ error: "Class is full" });
+      }
 
-    await client.query(
-      `INSERT INTO registrations (class_id, parent_id, status)
-       VALUES ($1, $2, 'registered')
-       ON CONFLICT (class_id, parent_id)
-       DO UPDATE SET status = 'registered'`,
-      [classId, parentId]
-    );
-    return res.status(201).json({
-      status: "registered",
-      message: "Successfully registered for class",
+      await trx("registrations")
+        .insert({
+          class_id: classId,
+          parent_id: parentId,
+          status: "registered",
+        })
+        .onConflict(["class_id", "parent_id"])
+        .merge({ status: "registered" });
+
+      return res.status(201).json({
+        status: "registered",
+        message: "Successfully registered for class",
+      });
     });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to register" });
-  } finally {
-    client.release();
   }
 });
 
 registrationsRouter.delete("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const reg = await pool.query(
-      "SELECT * FROM registrations WHERE id = $1 AND status = 'registered'",
-      [id]
-    );
-    if (reg.rows.length === 0) {
+    const reg = await db("registrations")
+      .select("*")
+      .where("id", id)
+      .andWhere("status", "registered")
+      .first();
+    if (!reg) {
       return res.status(404).json({ error: "Registration not found" });
     }
 
-    await pool.query(
-      "UPDATE registrations SET status = 'cancelled' WHERE id = $1",
-      [id]
-    );
+    await db("registrations")
+      .where("id", id)
+      .update({ status: "cancelled" });
 
     res.json({ message: "Registration cancelled" });
   } catch (err) {
