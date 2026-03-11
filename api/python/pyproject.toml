@@ -8,6 +8,7 @@ dependencies = [
     "uvicorn[standard]>=0.34.0",
     "psycopg2-binary==2.9.10",
     "sqlalchemy[postgresql]>=2.0.0",
+    "alembic>=1.13.0",
 ]
 
 [project.optional-dependencies]
@@ -15,6 +16,9 @@ dev = [
     "pytest==8.3.4",
     "httpx>=0.28.0",
 ]
+
+[tool.setuptools.packages.find]
+exclude = ["migrations*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

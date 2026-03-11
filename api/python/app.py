@@ -1,4 +1,6 @@
 import os
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -6,7 +8,26 @@ from routes.classes import router as classes_router
 from routes.parents import router as parents_router
 from routes.registrations import router as registrations_router
 
-app = FastAPI()
+
+def run_migrations() -> None:
+    from alembic import command
+    from alembic.config import Config
+
+    cfg = Config("alembic.ini")
+    cfg.set_main_option(
+        "sqlalchemy.url",
+        os.environ.get("DATABASE_URL", "postgresql://atlas:atlas@localhost:5432/atlas_academy"),
+    )
+    command.upgrade(cfg, "head")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    run_migrations()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
