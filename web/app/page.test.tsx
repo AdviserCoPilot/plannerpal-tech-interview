@@ -206,7 +206,7 @@ describe("Home page", () => {
     await waitFor(() => {
       const toast = screen.getByText("Registration cancelled");
       expect(toast).toBeInTheDocument();
-      expect(toast.closest("[role='alert']")?.className).toContain("bg-green-500");
+      expect(toast.closest("[role='alert']")?.className).toContain("bg-emerald-500");
       expect(screen.queryByText("My Bookings")).not.toBeInTheDocument();
     });
   });

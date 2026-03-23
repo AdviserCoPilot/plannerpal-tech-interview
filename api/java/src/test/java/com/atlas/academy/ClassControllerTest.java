@@ -47,7 +47,7 @@ class ClassControllerTest {
     void listClasses() throws Exception {
         ClassEntity cls = sampleClass();
         when(classRepo.findAllByOrderByStartTimeAsc()).thenReturn(List.of(cls));
-        when(registrationRepo.countByClassEntityIdAndStatus(cls.getId(), "registered")).thenReturn(5L);
+        when(registrationRepo.countRegisteredGroupedByClassId()).thenReturn(List.of(new Object[]{cls.getId(), 5L}));
 
         mockMvc.perform(get("/classes"))
                 .andExpect(status().isOk())

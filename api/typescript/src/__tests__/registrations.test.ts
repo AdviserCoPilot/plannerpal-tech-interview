@@ -8,7 +8,7 @@ const { knexInstance, chain } = vi.hoisted(() => {
   const methods = [
     "select", "where", "andWhere", "orderBy", "join",
     "first", "insert", "update", "count", "onConflict", "merge",
-    "del", "from",
+    "del", "from", "forUpdate",
   ];
   for (const m of methods) {
     _chain[m] = vi.fn(() => _chain);
@@ -147,7 +147,7 @@ describe("POST /registrations", () => {
       const trxMethods = [
         "select", "where", "andWhere", "orderBy", "join",
         "insert", "update", "count", "onConflict", "merge",
-        "del", "from",
+        "del", "from", "forUpdate",
       ];
       for (const m of trxMethods) {
         trxChain[m] = vi.fn(() => trxChain);
@@ -191,7 +191,7 @@ describe("POST /registrations", () => {
       const trxMethods = [
         "select", "where", "andWhere", "orderBy", "join",
         "insert", "update", "count", "onConflict", "merge",
-        "del", "from",
+        "del", "from", "forUpdate",
       ];
       for (const m of trxMethods) {
         trxChain[m] = vi.fn(() => trxChain);

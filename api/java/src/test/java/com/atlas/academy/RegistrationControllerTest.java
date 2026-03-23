@@ -103,7 +103,7 @@ class RegistrationControllerTest {
     void registerClassNotFound() throws Exception {
         UUID classId = UUID.randomUUID();
         UUID parentId = UUID.randomUUID();
-        when(classRepo.findCapacityById(classId)).thenReturn(null);
+        when(classRepo.findCapacityByIdForUpdate(classId)).thenReturn(null);
 
         mockMvc.perform(post("/registrations")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -118,7 +118,7 @@ class RegistrationControllerTest {
     void registerSuccess() throws Exception {
         UUID classId = UUID.randomUUID();
         UUID parentId = UUID.randomUUID();
-        when(classRepo.findCapacityById(classId)).thenReturn(20);
+        when(classRepo.findCapacityByIdForUpdate(classId)).thenReturn(20);
         when(registrationRepo.countByClassEntityIdAndStatus(classId, "registered")).thenReturn(5L);
         when(registrationRepo.findByClassIdAndParentId(classId, parentId)).thenReturn(null);
 
@@ -146,7 +146,7 @@ class RegistrationControllerTest {
     void registerClassFull() throws Exception {
         UUID classId = UUID.randomUUID();
         UUID parentId = UUID.randomUUID();
-        when(classRepo.findCapacityById(classId)).thenReturn(2);
+        when(classRepo.findCapacityByIdForUpdate(classId)).thenReturn(2);
         when(registrationRepo.countByClassEntityIdAndStatus(classId, "registered")).thenReturn(2L);
 
         mockMvc.perform(post("/registrations")
