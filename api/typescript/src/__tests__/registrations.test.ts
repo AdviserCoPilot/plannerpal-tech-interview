@@ -48,7 +48,7 @@ function createTrxMock() {
   const trxMethods = [
     "select", "where", "andWhere", "orderBy", "join",
     "insert", "update", "count", "onConflict", "merge",
-    "del", "from",
+    "del", "from", "forUpdate",
   ];
   for (const m of trxMethods) {
     trxChain[m] = vi.fn(() => trxChain);
