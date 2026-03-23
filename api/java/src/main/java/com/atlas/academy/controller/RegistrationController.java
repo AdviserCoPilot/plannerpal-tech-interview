@@ -137,7 +137,11 @@ public class RegistrationController {
                 return ResponseEntity.status(404)
                         .body(Map.of("error", "Registration not found"));
             }
-            Registration reg = registrationRepo.getReferenceById(uuid);
+            Registration reg = registrationRepo.findById(uuid).orElse(null);
+            if (reg == null) {
+                return ResponseEntity.status(404)
+                        .body(Map.of("error", "Registration not found"));
+            }
             reg.setStatus("cancelled");
             registrationRepo.save(reg);
             return ResponseEntity.ok(Map.of("message", "Registration cancelled"));

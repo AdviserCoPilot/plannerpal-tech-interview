@@ -168,7 +168,7 @@ class RegistrationControllerTest {
         Registration reg = new Registration();
         reg.setId(regId);
         reg.setStatus("registered");
-        when(registrationRepo.getReferenceById(regId)).thenReturn(reg);
+        when(registrationRepo.findById(regId)).thenReturn(java.util.Optional.of(reg));
 
         mockMvc.perform(delete("/registrations/" + regId))
                 .andExpect(status().isOk())
