@@ -7,7 +7,7 @@ public record ClassDto(
         UUID id,
         String name,
         String description,
-        int capacity,
+        Integer capacity,
         OffsetDateTime startTime,
         OffsetDateTime endTime,
         OffsetDateTime createdAt,

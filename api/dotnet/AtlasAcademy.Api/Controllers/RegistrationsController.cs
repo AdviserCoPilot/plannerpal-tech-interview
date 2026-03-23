@@ -54,16 +54,16 @@ public class RegistrationsController(IAtlasRepository repo) : ControllerBase
                 !Guid.TryParse(request.ParentId, out var parentId))
                 return BadRequest(new { error = "Invalid classId or parentId" });
 
-            var capacity = await repo.GetClassCapacityAsync(classId);
-            if (capacity < 0)
-                return NotFound(new { error = "Class not found" });
+            if (!await repo.ParentExistsAsync(parentId))
+                return NotFound(new { error = "Parent not found" });
 
-            var currentCount = await repo.CountRegisteredAsync(classId);
-            if (currentCount >= capacity)
-                return Conflict(new { error = "Class is full" });
-
-            await repo.RegisterAsync(classId, parentId);
-            return StatusCode(201, new { status = "registered", message = "Successfully registered for class" });
+            var result = await repo.RegisterWithLockAsync(classId, parentId);
+            return result switch
+            {
+                "class_not_found" => NotFound(new { error = "Class not found" }),
+                "class_full" => Conflict(new { error = "Class is full" }),
+                _ => StatusCode(201, new { status = "registered", message = "Successfully registered for class" }),
+            };
         }
         catch
         {
@@ -77,12 +77,14 @@ public class RegistrationsController(IAtlasRepository repo) : ControllerBase
         try
         {
             if (!Guid.TryParse(id, out var guid))
-                return NotFound(new { error = "Registration not found" });
+                return BadRequest(new { error = "Invalid registration id" });
 
             if (!await repo.RegistrationExistsActiveAsync(guid))
                 return NotFound(new { error = "Registration not found" });
 
-            await repo.CancelRegistrationAsync(guid);
+            var cancelled = await repo.CancelRegistrationAsync(guid);
+            if (!cancelled)
+                return NotFound(new { error = "Registration not found" });
             return Ok(new { message = "Registration cancelled" });
         }
         catch

@@ -12,6 +12,8 @@ public interface IAtlasRepository
     Task<IEnumerable<AdminRegistration>> GetAllRegistrationsAsync();
     Task<long> CountRegisteredAsync(Guid classId);
     Task RegisterAsync(Guid classId, Guid parentId);
+    Task<string> RegisterWithLockAsync(Guid classId, Guid parentId);
     Task<bool> RegistrationExistsActiveAsync(Guid id);
-    Task CancelRegistrationAsync(Guid id);
+    Task<bool> ParentExistsAsync(Guid id);
+    Task<bool> CancelRegistrationAsync(Guid id);
 }

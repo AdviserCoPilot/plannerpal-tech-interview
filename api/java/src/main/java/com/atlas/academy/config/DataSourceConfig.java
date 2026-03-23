@@ -30,7 +30,13 @@ public class DataSourceConfig {
             // Parse postgresql://user:pass@host:port/db format
             String stripped = databaseUrl.replace("postgresql://", "");
             String[] userAndRest = stripped.split("@", 2);
+            if (userAndRest.length < 2) {
+                throw new IllegalArgumentException("Malformed DATABASE_URL: missing '@' delimiter. Expected postgresql://user:pass@host:port/db");
+            }
             String[] userPass = userAndRest[0].split(":", 2);
+            if (userPass.length < 2) {
+                throw new IllegalArgumentException("Malformed DATABASE_URL: missing ':' in credentials. Expected postgresql://user:pass@host:port/db");
+            }
             String hostPortDb = userAndRest[1];
 
             builder.url("jdbc:postgresql://" + hostPortDb);

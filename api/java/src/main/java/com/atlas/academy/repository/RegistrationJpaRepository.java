@@ -19,6 +19,9 @@ public interface RegistrationJpaRepository extends JpaRepository<Registration, U
 
     long countByClassEntityIdAndStatus(UUID classEntityId, String status);
 
+    @Query("SELECT r.classEntity.id, COUNT(r) FROM Registration r WHERE r.status = 'registered' GROUP BY r.classEntity.id")
+    List<Object[]> countRegisteredGroupedByClassId();
+
     @Query("SELECT r FROM Registration r WHERE r.classEntity.id = :classId AND r.parent.id = :parentId")
     Registration findByClassIdAndParentId(UUID classId, UUID parentId);
 

@@ -52,25 +52,26 @@ registrationsRouter.post("/", async (req, res) => {
       return res.status(400).json({ error: "classId and parentId required" });
     }
 
-    await db.transaction(async (trx) => {
+    const result = await db.transaction(async (trx) => {
       const classRow = await trx("classes")
         .select("capacity")
         .where("id", classId)
+        .forUpdate()
         .first();
       if (!classRow) {
-        return res.status(404).json({ error: "Class not found" });
+        return { status: 404, body: { error: "Class not found" } };
       }
-      const capacity = parseInt(classRow.capacity, 10);
+      const capacity = Number(classRow.capacity);
 
       const countResult = await trx("registrations")
         .count("* as count")
         .where("class_id", classId)
         .andWhere("status", "registered")
         .first();
-      const registeredCount = parseInt((countResult as any).count, 10);
+      const registeredCount = countResult ? Number((countResult as any).count) : 0;
 
       if (registeredCount >= capacity) {
-        return res.status(409).json({ error: "Class is full" });
+        return { status: 409, body: { error: "Class is full" } };
       }
 
       await trx("registrations")
@@ -82,11 +83,12 @@ registrationsRouter.post("/", async (req, res) => {
         .onConflict(["class_id", "parent_id"])
         .merge({ status: "registered" });
 
-      return res.status(201).json({
-        status: "registered",
-        message: "Successfully registered for class",
-      });
+      return {
+        status: 201,
+        body: { status: "registered", message: "Successfully registered for class" },
+      };
     });
+    res.status(result.status).json(result.body);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to register" });

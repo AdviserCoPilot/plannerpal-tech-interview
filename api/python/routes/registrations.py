@@ -104,9 +104,13 @@ def create_registration(body: CreateRegistrationRequest, db: Session = Depends(g
         class_id = body.classId
         parent_id = body.parentId
 
-        cls = db.query(Class).filter(Class.id == class_id).first()
+        cls = db.query(Class).filter(Class.id == class_id).with_for_update().first()
         if not cls:
             raise HTTPException(status_code=404, detail="Class not found")
+
+        parent = db.query(Parent).filter(Parent.id == parent_id).first()
+        if not parent:
+            raise HTTPException(status_code=404, detail="Parent not found")
 
         registered_count = (
             db.query(func.count(Registration.id))

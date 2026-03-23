@@ -96,8 +96,10 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ classId, parentId: selectedParent }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed");
+      }
       setActionMsg({ type: "ok", text: "Registered!" });
       await refreshAll();
     } catch (e) {
@@ -117,11 +119,17 @@ export default function Home() {
       const res = await fetch(`${API_URL}/registrations/${regId}`, {
         method: "DELETE",
       });
-      if (!res.ok) throw new Error("Failed to cancel");
-      setActionMsg({ type: "err", text: "Registration cancelled" });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to cancel");
+      }
+      setActionMsg({ type: "ok", text: "Registration cancelled" });
       await refreshAll();
-    } catch {
-      setActionMsg({ type: "err", text: "Could not cancel" });
+    } catch (e) {
+      setActionMsg({
+        type: "err",
+        text: e instanceof Error ? e.message : "Could not cancel",
+      });
     } finally {
       setBusy(null);
     }

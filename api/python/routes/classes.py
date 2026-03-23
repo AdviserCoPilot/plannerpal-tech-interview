@@ -17,7 +17,7 @@ def _serialize_class(cls: Class, registered_count: int) -> dict:
         "start_time": cls.start_time.isoformat() if cls.start_time else None,
         "end_time": cls.end_time.isoformat() if cls.end_time else None,
         "created_at": cls.created_at.isoformat() if cls.created_at else None,
-        "registered_count": str(registered_count),
+        "registered_count": registered_count,
     }
 
 

@@ -7,10 +7,8 @@ import com.atlas.academy.repository.RegistrationJpaRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/classes")
@@ -28,7 +26,20 @@ public class ClassController {
     public ResponseEntity<?> list() {
         try {
             List<ClassEntity> classes = classRepo.findAllByOrderByStartTimeAsc();
-            List<ClassDto> dtos = classes.stream().map(this::toDto).toList();
+            Map<UUID, Long> countsByClassId = registrationRepo.countRegisteredGroupedByClassId()
+                    .stream()
+                    .collect(Collectors.toMap(
+                            row -> (UUID) row[0],
+                            row -> (Long) row[1]
+                    ));
+            List<ClassDto> dtos = classes.stream()
+                    .map(c -> new ClassDto(
+                            c.getId(), c.getName(), c.getDescription(),
+                            c.getCapacity() != null ? c.getCapacity() : 0,
+                            c.getStartTime(), c.getEndTime(), c.getCreatedAt(),
+                            countsByClassId.getOrDefault(c.getId(), 0L)
+                    ))
+                    .toList();
             return ResponseEntity.ok(dtos);
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
@@ -57,7 +68,8 @@ public class ClassController {
     private ClassDto toDto(ClassEntity c) {
         long count = registrationRepo.countByClassEntityIdAndStatus(c.getId(), "registered");
         return new ClassDto(
-                c.getId(), c.getName(), c.getDescription(), c.getCapacity(),
+                c.getId(), c.getName(), c.getDescription(),
+                c.getCapacity() != null ? c.getCapacity() : 0,
                 c.getStartTime(), c.getEndTime(), c.getCreatedAt(), count
         );
     }

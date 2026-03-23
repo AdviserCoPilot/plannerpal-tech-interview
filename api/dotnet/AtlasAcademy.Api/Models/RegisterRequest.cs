@@ -3,6 +3,6 @@ using System.Text.Json.Serialization;
 namespace AtlasAcademy.Api.Models;
 
 public record RegisterRequest(
-    [property: JsonPropertyName("classId")] string? ClassId,
-    [property: JsonPropertyName("parentId")] string? ParentId
+    [property: JsonPropertyName("class_id")] string? ClassId,
+    [property: JsonPropertyName("parent_id")] string? ParentId
 );

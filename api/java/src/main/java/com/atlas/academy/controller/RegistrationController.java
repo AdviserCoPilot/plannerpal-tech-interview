@@ -38,7 +38,15 @@ public class RegistrationController {
             UUID uuid = UUID.fromString(parentId);
             List<Registration> registrations = registrationRepo.findByParentIdAndStatusRegistered(uuid);
             List<RegistrationDto> dtos = registrations.stream()
-                    .map(r -> new RegistrationDto(r.getId(), r.getClassEntity().getId(), r.getStatus(), r.getClassEntity().getName()))
+                    .map(r -> {
+                        var cls = r.getClassEntity();
+                        return new RegistrationDto(
+                                r.getId(),
+                                cls != null ? cls.getId() : null,
+                                r.getStatus(),
+                                cls != null ? cls.getName() : null
+                        );
+                    })
                     .toList();
             return ResponseEntity.ok(Map.of("registrations", dtos));
         } catch (IllegalArgumentException e) {
@@ -84,7 +92,7 @@ public class RegistrationController {
             UUID classId = UUID.fromString(request.classId());
             UUID parentId = UUID.fromString(request.parentId());
 
-            Integer capacity = classRepo.findCapacityById(classId);
+            Integer capacity = classRepo.findCapacityByIdForUpdate(classId);
             if (capacity == null) {
                 return ResponseEntity.status(404)
                         .body(Map.of("error", "Class not found"));
@@ -134,8 +142,8 @@ public class RegistrationController {
             registrationRepo.save(reg);
             return ResponseEntity.ok(Map.of("message", "Registration cancelled"));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(404)
-                    .body(Map.of("error", "Registration not found"));
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Invalid registration id"));
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
                     .body(Map.of("error", "Failed to cancel registration"));

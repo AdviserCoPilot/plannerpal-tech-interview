@@ -57,7 +57,7 @@ public class PostgresRepository : IAtlasRepository
     public async Task<int> GetClassCapacityAsync(Guid classId)
     {
         var cls = await _context.Classes
-            .Where(c => c.Id == classId)
+            .FromSqlRaw("SELECT * FROM classes WHERE id = {0} FOR UPDATE", classId)
             .Select(c => (int?)c.Capacity)
             .FirstOrDefaultAsync();
 
@@ -101,6 +101,44 @@ public class PostgresRepository : IAtlasRepository
             .CountAsync(r => r.ClassId == classId && r.Status == "registered");
     }
 
+    public async Task<string> RegisterWithLockAsync(Guid classId, Guid parentId)
+    {
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+
+        var cls = await _context.Classes
+            .FromSqlRaw("SELECT * FROM classes WHERE id = {0} FOR UPDATE", classId)
+            .FirstOrDefaultAsync();
+        if (cls is null)
+            return "class_not_found";
+
+        var count = await _context.Registrations
+            .CountAsync(r => r.ClassId == classId && r.Status == "registered");
+        if (count >= cls.Capacity)
+            return "class_full";
+
+        var existing = await _context.Registrations
+            .FirstOrDefaultAsync(r => r.ClassId == classId && r.ParentId == parentId);
+        if (existing is not null)
+        {
+            existing.Status = "registered";
+        }
+        else
+        {
+            _context.Registrations.Add(new Entities.RegistrationEntity
+            {
+                Id = Guid.NewGuid(),
+                ClassId = classId,
+                ParentId = parentId,
+                Status = "registered",
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+        }
+
+        await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
+        return "ok";
+    }
+
     public async Task RegisterAsync(Guid classId, Guid parentId)
     {
         var existing = await _context.Registrations
@@ -131,15 +169,21 @@ public class PostgresRepository : IAtlasRepository
             .AnyAsync(r => r.Id == id && r.Status == "registered");
     }
 
-    public async Task CancelRegistrationAsync(Guid id)
+    public async Task<bool> ParentExistsAsync(Guid id)
+    {
+        return await _context.Parents.AnyAsync(p => p.Id == id);
+    }
+
+    public async Task<bool> CancelRegistrationAsync(Guid id)
     {
         var registration = await _context.Registrations
-            .FirstOrDefaultAsync(r => r.Id == id);
+            .FirstOrDefaultAsync(r => r.Id == id && r.Status == "registered");
 
-        if (registration is not null)
-        {
-            registration.Status = "cancelled";
-            await _context.SaveChangesAsync();
-        }
+        if (registration is null)
+            return false;
+
+        registration.Status = "cancelled";
+        await _context.SaveChangesAsync();
+        return true;
     }
 }
