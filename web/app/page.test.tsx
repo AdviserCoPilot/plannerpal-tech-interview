@@ -13,7 +13,7 @@ const mockClasses = [
     id: "c1",
     name: "Chess Club",
     capacity: 3,
-    registered_count: "1",
+    registered_count: 1,
     description: null,
     start_time: "2025-03-21T14:00:00Z",
     end_time: "2025-03-21T15:00:00Z",

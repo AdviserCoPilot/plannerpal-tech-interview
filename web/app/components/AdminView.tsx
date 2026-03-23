@@ -31,7 +31,7 @@ export default function AdminView({ classes }: AdminViewProps) {
   return (
     <div className="space-y-6">
       {regsByClass.map((c) => {
-        const reg = parseInt(c.registered_count, 10);
+        const reg = c.registered_count;
         const full = reg >= c.capacity;
 
         return (

@@ -83,8 +83,8 @@ public class RegistrationsTests
         var classId = Guid.NewGuid();
         var parentId = Guid.NewGuid();
         var repo = CreateMockRepo();
-        repo.GetClassCapacityAsync(classId).Returns(-1);
         repo.ParentExistsAsync(parentId).Returns(true);
+        repo.RegisterWithLockAsync(classId, parentId).Returns("class_not_found");
         await using var factory = new TestWebAppFactory(repo);
         var client = factory.CreateClient();
 
@@ -100,9 +100,8 @@ public class RegistrationsTests
         var classId = Guid.NewGuid();
         var parentId = Guid.NewGuid();
         var repo = CreateMockRepo();
-        repo.GetClassCapacityAsync(classId).Returns(20);
-        repo.CountRegisteredAsync(classId).Returns(5);
         repo.ParentExistsAsync(parentId).Returns(true);
+        repo.RegisterWithLockAsync(classId, parentId).Returns("ok");
         await using var factory = new TestWebAppFactory(repo);
         var client = factory.CreateClient();
 
@@ -112,7 +111,7 @@ public class RegistrationsTests
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.Equal("registered", json.RootElement.GetProperty("status").GetString());
-        await repo.Received(1).RegisterAsync(classId, parentId);
+        await repo.Received(1).RegisterWithLockAsync(classId, parentId);
     }
 
     [Fact]
@@ -121,9 +120,8 @@ public class RegistrationsTests
         var classId = Guid.NewGuid();
         var parentId = Guid.NewGuid();
         var repo = CreateMockRepo();
-        repo.GetClassCapacityAsync(classId).Returns(2);
-        repo.CountRegisteredAsync(classId).Returns(2);
         repo.ParentExistsAsync(parentId).Returns(true);
+        repo.RegisterWithLockAsync(classId, parentId).Returns("class_full");
         await using var factory = new TestWebAppFactory(repo);
         var client = factory.CreateClient();
 
@@ -131,7 +129,6 @@ public class RegistrationsTests
             new { class_id = classId.ToString(), parent_id = parentId.ToString() });
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
-        await repo.DidNotReceive().RegisterAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
     }
 
     [Fact]
@@ -139,7 +136,6 @@ public class RegistrationsTests
     {
         var regId = Guid.NewGuid();
         var repo = CreateMockRepo();
-        repo.RegistrationExistsActiveAsync(regId).Returns(true);
         repo.CancelRegistrationAsync(regId).Returns(true);
         await using var factory = new TestWebAppFactory(repo);
         var client = factory.CreateClient();
@@ -155,7 +151,7 @@ public class RegistrationsTests
     {
         var regId = Guid.NewGuid();
         var repo = CreateMockRepo();
-        repo.RegistrationExistsActiveAsync(regId).Returns(false);
+        repo.CancelRegistrationAsync(regId).Returns(false);
         await using var factory = new TestWebAppFactory(repo);
         var client = factory.CreateClient();
 

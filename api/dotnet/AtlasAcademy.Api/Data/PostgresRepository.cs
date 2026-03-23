@@ -54,16 +54,6 @@ public class PostgresRepository : IAtlasRepository
             .FirstOrDefaultAsync();
     }
 
-    public async Task<int> GetClassCapacityAsync(Guid classId)
-    {
-        var cls = await _context.Classes
-            .FromSqlRaw("SELECT * FROM classes WHERE id = {0} FOR UPDATE", classId)
-            .Select(c => (int?)c.Capacity)
-            .FirstOrDefaultAsync();
-
-        return cls ?? -1;
-    }
-
     public async Task<IEnumerable<Registration>> GetRegistrationsByParentAsync(Guid parentId)
     {
         return await _context.Registrations
@@ -93,12 +83,6 @@ public class PostgresRepository : IAtlasRepository
                 r.CreatedAt
             ))
             .ToListAsync();
-    }
-
-    public async Task<long> CountRegisteredAsync(Guid classId)
-    {
-        return await _context.Registrations
-            .CountAsync(r => r.ClassId == classId && r.Status == "registered");
     }
 
     public async Task<string> RegisterWithLockAsync(Guid classId, Guid parentId)
@@ -137,36 +121,6 @@ public class PostgresRepository : IAtlasRepository
         await _context.SaveChangesAsync();
         await transaction.CommitAsync();
         return "ok";
-    }
-
-    public async Task RegisterAsync(Guid classId, Guid parentId)
-    {
-        var existing = await _context.Registrations
-            .FirstOrDefaultAsync(r => r.ClassId == classId && r.ParentId == parentId);
-
-        if (existing is not null)
-        {
-            existing.Status = "registered";
-        }
-        else
-        {
-            _context.Registrations.Add(new Entities.RegistrationEntity
-            {
-                Id = Guid.NewGuid(),
-                ClassId = classId,
-                ParentId = parentId,
-                Status = "registered",
-                CreatedAt = DateTimeOffset.UtcNow
-            });
-        }
-
-        await _context.SaveChangesAsync();
-    }
-
-    public async Task<bool> RegistrationExistsActiveAsync(Guid id)
-    {
-        return await _context.Registrations
-            .AnyAsync(r => r.Id == id && r.Status == "registered");
     }
 
     public async Task<bool> ParentExistsAsync(Guid id)

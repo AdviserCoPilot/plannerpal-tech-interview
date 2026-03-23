@@ -19,6 +19,6 @@ public interface ClassJpaRepository extends JpaRepository<ClassEntity, UUID> {
     Integer findCapacityById(UUID id);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT c.capacity FROM ClassEntity c WHERE c.id = :id")
-    Integer findCapacityByIdForUpdate(UUID id);
+    @Query("SELECT c FROM ClassEntity c WHERE c.id = :id")
+    ClassEntity findByIdForUpdate(UUID id);
 }

@@ -49,7 +49,7 @@ export default function ClassTable({
           </thead>
           <tbody>
             {classes.map((c) => {
-              const reg = parseInt(c.registered_count, 10);
+              const reg = c.registered_count;
               const full = reg >= c.capacity;
               const registered = isRegistered(c.id);
 

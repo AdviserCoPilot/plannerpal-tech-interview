@@ -9,7 +9,7 @@ export type Class = {
   name: string;
   description: string | null;
   capacity: number;
-  registered_count: string;
+  registered_count: number;
   start_time: string;
   end_time: string;
 };

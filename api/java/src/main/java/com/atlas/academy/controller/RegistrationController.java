@@ -92,11 +92,12 @@ public class RegistrationController {
             UUID classId = UUID.fromString(request.classId());
             UUID parentId = UUID.fromString(request.parentId());
 
-            Integer capacity = classRepo.findCapacityByIdForUpdate(classId);
-            if (capacity == null) {
+            ClassEntity classEntity = classRepo.findByIdForUpdate(classId);
+            if (classEntity == null) {
                 return ResponseEntity.status(404)
                         .body(Map.of("error", "Class not found"));
             }
+            Integer capacity = classEntity.getCapacity() != null ? classEntity.getCapacity() : 0;
 
             long currentCount = registrationRepo.countByClassEntityIdAndStatus(classId, "registered");
             if (currentCount >= capacity) {
@@ -133,12 +134,8 @@ public class RegistrationController {
     public ResponseEntity<?> cancel(@PathVariable String id) {
         try {
             UUID uuid = UUID.fromString(id);
-            if (!registrationRepo.existsByIdAndStatus(uuid, "registered")) {
-                return ResponseEntity.status(404)
-                        .body(Map.of("error", "Registration not found"));
-            }
             Registration reg = registrationRepo.findById(uuid).orElse(null);
-            if (reg == null) {
+            if (reg == null || !"registered".equals(reg.getStatus())) {
                 return ResponseEntity.status(404)
                         .body(Map.of("error", "Registration not found"));
             }

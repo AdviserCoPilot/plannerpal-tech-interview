@@ -79,9 +79,6 @@ public class RegistrationsController(IAtlasRepository repo) : ControllerBase
             if (!Guid.TryParse(id, out var guid))
                 return BadRequest(new { error = "Invalid registration id" });
 
-            if (!await repo.RegistrationExistsActiveAsync(guid))
-                return NotFound(new { error = "Registration not found" });
-
             var cancelled = await repo.CancelRegistrationAsync(guid);
             if (!cancelled)
                 return NotFound(new { error = "Registration not found" });
