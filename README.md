@@ -4,9 +4,25 @@ EdTech class scheduler for after-school programs. This is a starter repo for a p
 
 ## Prerequisites
 
-- Git
-- Docker + Docker Compose
-- Modern browser
+**Docker (recommended):** Just need Git, Docker, and a modern browser.
+
+| Dependency | Minimum Version | Notes |
+|------------|----------------|-------|
+| Docker Engine | 20.10+ | Or Docker Desktop 4.0+ |
+| Docker Compose | V2 (2.0+) | Use `docker compose` (space), not the legacy `docker-compose` (hyphen) |
+
+> **Why V2?** The compose files use `depends_on: condition: service_healthy` and the Compose Specification format (no `version:` key). These won't work with Compose V1. Check your version with `docker compose version`.
+
+**Local development:** To run tests or develop outside Docker, you'll also need:
+
+| Project | Requirement |
+|---------|-------------|
+| TypeScript API | Node.js 22+ |
+| Python API | Python 3.12+ |
+| Java API | JDK 21 (toolchain pinned; Gradle auto-downloads if missing) |
+| .NET API | .NET 9 SDK |
+| Frontend | Node.js 20+ |
+| Database | PostgreSQL 16 (or use Docker for just the DB) |
 
 ## Quick Start
 
@@ -57,36 +73,43 @@ cd api/typescript && npm install && npm test
 cd api/python && pip install ".[dev]" && pytest
 ```
 
-**Java (requires JDK 21+):**
+**Java:**
 ```bash
 cd api/java && ./gradlew test
 ```
 
-**C#/.NET (requires .NET 9 SDK):**
+**C#/.NET:**
 ```bash
 cd api/dotnet && dotnet test
 ```
 
-**Frontend (58 tests):**
+**Frontend:**
 ```bash
 cd web && npm install && npm test
 ```
 
 ## Architecture
 
-- **Web** (Next.js / React / Tailwind): Class browsing, registration, admin view
-- **API**: REST API for classes and registrations (TypeScript, Python, Java, or C# -- same endpoints)
-- **DB** (PostgreSQL): Classes, parents, registrations
+- **Web**: Next.js 14, React 18, Tailwind CSS 3, Vite/Vitest
+- **API**: REST API for classes and registrations (pick one -- all expose the same endpoints)
+- **DB**: PostgreSQL 16
+
+| Stack | Framework | ORM / Query | Migrations | Test Framework |
+|-------|-----------|-------------|------------|----------------|
+| TypeScript | Express 4.18 | Knex 3.1 + pg | Knex | Vitest + Supertest |
+| Python | FastAPI 0.115 | psycopg2 2.9 | Alembic | pytest + httpx |
+| Java | Spring Boot 3.4.3 | Spring Data JPA | Flyway | JUnit 5 + Spring Test |
+| C#/.NET | ASP.NET Core 9 | EF Core 9 + Npgsql | DbUp | xUnit + NSubstitute |
 
 ## Project Structure
 
 ```
 ├── api/
-│   ├── typescript/    # Express + TypeScript API
-│   ├── python/        # FastAPI API
-│   ├── java/          # Spring Boot API (Java 21, Gradle)
-│   └── dotnet/        # ASP.NET Core API (.NET 9)
-├── web/               # Next.js frontend
+│   ├── typescript/    # Express 4, Knex, pg (Node 22)
+│   ├── python/        # FastAPI, psycopg2, Alembic (Python 3.12)
+│   ├── java/          # Spring Boot 3.4, Flyway (JDK 21, Gradle 8.14)
+│   └── dotnet/        # ASP.NET Core 9, EF Core, DbUp (.NET 9)
+├── web/               # Next.js 14, React 18 (Node 20)
 ├── docker-compose.typescript.yml
 ├── docker-compose.python.yml
 ├── docker-compose.java.yml
