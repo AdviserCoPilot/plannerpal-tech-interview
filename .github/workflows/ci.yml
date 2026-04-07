@@ -85,6 +85,39 @@ jobs:
       - run: dotnet build --no-restore
       - run: dotnet test --no-build --verbosity normal
 
+  api-ruby:
+    name: API – Ruby
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: atlas
+          POSTGRES_PASSWORD: atlas
+          POSTGRES_DB: atlas_academy
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U atlas -d atlas_academy"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: api/ruby
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3.0"
+          bundler-cache: false
+      - run: bundle install
+      - name: Run tests
+        run: bundle exec rspec
+        env:
+          RAILS_ENV: test
+          DATABASE_URL: postgresql://atlas:atlas@localhost:5432/atlas_academy
+
   web:
     name: Web – Next.js
     runs-on: ubuntu-latest
