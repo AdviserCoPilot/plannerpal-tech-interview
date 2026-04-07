@@ -112,6 +112,11 @@ jobs:
           ruby-version: "3.3.0"
           bundler-cache: false
       - run: bundle install
+      - name: Migrate test database
+        run: bundle exec rails db:migrate
+        env:
+          RAILS_ENV: test
+          DATABASE_URL: postgresql://atlas:atlas@localhost:5432/atlas_academy
       - name: Run tests
         run: bundle exec rspec
         env:
