@@ -52,16 +52,24 @@ class RegistrationsController < ApplicationController
     class_id  = params[:classId]
     parent_id = params[:parentId]
 
+    error = nil
     Registration.transaction do
       klass = Klass.lock.find_by(id: class_id)
-      return render_error("Class not found", :not_found) unless klass
+      if klass.nil?
+        error = ["Class not found", :not_found]
+        raise ActiveRecord::Rollback
+      end
 
       parent = Parent.find_by(id: parent_id)
-      return render_error("Parent not found", :not_found) unless parent
+      if parent.nil?
+        error = ["Parent not found", :not_found]
+        raise ActiveRecord::Rollback
+      end
 
       registered_count = Registration.active.where(class_id: class_id).count
       if registered_count >= klass.capacity
-        return render_error("Class is full", :conflict)
+        error = ["Class is full", :conflict]
+        raise ActiveRecord::Rollback
       end
 
       existing = Registration.find_by(class_id: class_id, parent_id: parent_id)
@@ -75,6 +83,8 @@ class RegistrationsController < ApplicationController
         )
       end
     end
+
+    return render_error(*error) if error
 
     render json: {
       status:  "registered",
