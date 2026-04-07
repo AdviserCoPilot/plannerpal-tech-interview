@@ -1,0 +1,9 @@
+/log/*
+/tmp/*
+!/log/.keep
+!/tmp/.keep
+/.bundle
+/vendor/bundle
+/Gemfile.lock
+/spec/examples.txt
+.byebug_history

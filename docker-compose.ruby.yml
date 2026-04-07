@@ -1,0 +1,48 @@
+services:
+  api:
+    build: ./api/ruby
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - DATABASE_URL=postgresql://atlas:atlas@db:5432/atlas_academy
+      - RAILS_ENV=development
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./api/ruby:/app
+      - bundle_cache:/usr/local/bundle
+
+  web:
+    build: ./web
+    ports:
+      - "3001:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:4000
+    depends_on:
+      - api
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+      - /app/.next
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=atlas
+      - POSTGRES_PASSWORD=atlas
+      - POSTGRES_DB=atlas_academy
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_ruby:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atlas -d atlas_academy"]
+      interval: 2s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data_ruby:
+  bundle_cache:

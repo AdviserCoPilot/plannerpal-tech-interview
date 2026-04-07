@@ -21,6 +21,7 @@ EdTech class scheduler for after-school programs. This is a starter repo for a p
 | Python API | Python 3.12+ |
 | Java API | JDK 21 (toolchain pinned; Gradle auto-downloads if missing) |
 | .NET API | .NET 9 SDK |
+| Ruby API | Ruby 3.3+ |
 | Frontend | Node.js 20+ |
 | Database | PostgreSQL 16 (or use Docker for just the DB) |
 
@@ -54,6 +55,11 @@ docker compose -f docker-compose.java.yml up --build
 docker compose -f docker-compose.dotnet.yml up --build
 ```
 
+**Ruby/Rails:**
+```bash
+docker compose -f docker-compose.ruby.yml up --build
+```
+
 ## URLs
 
 | Service | URL |
@@ -83,6 +89,15 @@ cd api/java && ./gradlew test
 cd api/dotnet && dotnet test
 ```
 
+**Ruby/Rails:**
+```bash
+cd api/ruby && bundle install && bundle exec rspec
+```
+Or, if you don't have Ruby installed locally:
+```bash
+docker compose -f docker-compose.ruby.yml run --rm api bundle exec rspec
+```
+
 **Frontend:**
 ```bash
 cd web && npm install && npm test
@@ -100,6 +115,7 @@ cd web && npm install && npm test
 | Python | FastAPI 0.115 | psycopg2 2.9 | Alembic | pytest + httpx |
 | Java | Spring Boot 3.4.3 | Spring Data JPA | Flyway | JUnit 5 + Spring Test |
 | C#/.NET | ASP.NET Core 9 | EF Core 9 + Npgsql | DbUp | xUnit + NSubstitute |
+| Ruby | Rails 7.1 (API) | ActiveRecord | ActiveRecord migrations | RSpec |
 
 ## Project Structure
 
@@ -108,12 +124,14 @@ cd web && npm install && npm test
 │   ├── typescript/    # Express 4, Knex, pg (Node 22)
 │   ├── python/        # FastAPI, psycopg2, Alembic (Python 3.12)
 │   ├── java/          # Spring Boot 3.4, Flyway (JDK 21, Gradle 8.14)
-│   └── dotnet/        # ASP.NET Core 9, EF Core, DbUp (.NET 9)
+│   ├── dotnet/        # ASP.NET Core 9, EF Core, DbUp (.NET 9)
+│   └── ruby/          # Rails 7.1 API-only, ActiveRecord (Ruby 3.3)
 ├── web/               # Next.js 14, React 18 (Node 20)
 ├── docker-compose.typescript.yml
 ├── docker-compose.python.yml
 ├── docker-compose.java.yml
-└── docker-compose.dotnet.yml
+├── docker-compose.dotnet.yml
+└── docker-compose.ruby.yml
 ```
 
 ## Views

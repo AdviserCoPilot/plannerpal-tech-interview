@@ -49,6 +49,7 @@ ENV/
 # .NET
 bin/
 obj/
+!api/ruby/bin/
 
 # Java / Gradle
 .gradle/
