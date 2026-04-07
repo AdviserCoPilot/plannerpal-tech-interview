@@ -27,6 +27,12 @@ RSpec.describe "Classes API", type: :request do
         "start_time", "end_time", "created_at", "registered_count",
       )
     end
+
+    it "reports registered_count of 0 for classes with no registrations" do
+      get "/classes"
+      chess = response.parsed_body.find { |c| c["name"] == "Chess Club" }
+      expect(chess["registered_count"]).to eq(0)
+    end
   end
 
   describe "GET /classes/:id" do
