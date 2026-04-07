@@ -47,4 +47,46 @@ class RegistrationsController < ApplicationController
 
     render json: payload
   end
+
+  def create
+    class_id  = params[:classId]
+    parent_id = params[:parentId]
+
+    Registration.transaction do
+      klass = Klass.lock.find_by(id: class_id)
+      return render_error("Class not found", :not_found) unless klass
+
+      parent = Parent.find_by(id: parent_id)
+      return render_error("Parent not found", :not_found) unless parent
+
+      registered_count = Registration.active.where(class_id: class_id).count
+      if registered_count >= klass.capacity
+        return render_error("Class is full", :conflict)
+      end
+
+      existing = Registration.find_by(class_id: class_id, parent_id: parent_id)
+      if existing
+        existing.update!(status: Registration::STATUS_REGISTERED)
+      else
+        Registration.create!(
+          class_id:  class_id,
+          parent_id: parent_id,
+          status:    Registration::STATUS_REGISTERED,
+        )
+      end
+    end
+
+    render json: {
+      status:  "registered",
+      message: "Successfully registered for class",
+    }, status: :created
+  end
+
+  def destroy
+    reg = Registration.active.find_by(id: params[:id])
+    return render_error("Registration not found", :not_found) unless reg
+
+    reg.update!(status: Registration::STATUS_CANCELLED)
+    head :no_content
+  end
 end
