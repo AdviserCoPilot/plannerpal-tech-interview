@@ -318,7 +318,7 @@ git commit -m "Add Rails API skeleton (Gemfile, config, bin)"
 - [ ] **Step 1: Write `api/ruby/Dockerfile`**
 
 ```dockerfile
-FROM ruby:3.3-slim
+FROM ruby:3.3.0-slim
 
 ENV LANG=C.UTF-8 \
     BUNDLE_PATH=/usr/local/bundle \
