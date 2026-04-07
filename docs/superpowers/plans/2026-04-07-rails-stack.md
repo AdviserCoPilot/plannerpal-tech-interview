@@ -108,7 +108,6 @@ end
 require_relative "config/environment"
 
 run Rails.application
-Rails.application.load_server
 ```
 
 - [ ] **Step 4: Write `api/ruby/Rakefile`**
@@ -173,8 +172,6 @@ module AtlasAcademy
   class Application < Rails::Application
     config.load_defaults 7.1
     config.api_only = true
-    config.autoload_paths += %W[#{config.root}/app/controllers #{config.root}/app/models]
-    config.eager_load = false
   end
 end
 ```
