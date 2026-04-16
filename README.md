@@ -21,7 +21,7 @@ EdTech class scheduler for after-school programs. This is a starter repo for a p
 | Python API | Python 3.12+ |
 | Java API | JDK 21 (toolchain pinned; Gradle auto-downloads if missing) |
 | .NET API | .NET 9 SDK |
-| Ruby API | Ruby 3.3+ |
+| Ruby API | Ruby 3.3.x (any patch) |
 | Frontend | Node.js 20+ |
 | Database | PostgreSQL 16 (or use Docker for just the DB) |
 

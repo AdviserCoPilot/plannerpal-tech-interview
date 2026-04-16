@@ -1,4 +1,4 @@
-FROM ruby:3.3.0-slim
+FROM ruby:3.3-slim
 
 ENV LANG=C.UTF-8 \
     BUNDLE_PATH=/usr/local/bundle \
