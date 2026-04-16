@@ -70,3 +70,6 @@ api/java/build/
 
 # Worktrees
 .worktrees/
+
+# Docs
+docs/
