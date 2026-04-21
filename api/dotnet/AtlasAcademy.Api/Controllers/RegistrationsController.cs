@@ -1,92 +1,43 @@
-using AtlasAcademy.Api.Data;
+using AtlasAcademy.Api.Exceptions;
 using AtlasAcademy.Api.Models;
+using AtlasAcademy.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AtlasAcademy.Api.Controllers;
 
 [ApiController]
 [Route("registrations")]
-public class RegistrationsController(IAtlasRepository repo) : ControllerBase
+public class RegistrationsController(IRegistrationService registrationService) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetByParent([FromQuery] string? parentId)
+    public async Task<IActionResult> GetByParent([FromQuery] Guid? parentId)
     {
-        if (string.IsNullOrWhiteSpace(parentId))
-            return BadRequest(new { error = "parentId is required" });
+        if (parentId is null)
+            throw new ValidationException("parentId is required");
 
-        try
-        {
-            if (!Guid.TryParse(parentId, out var guid))
-                return BadRequest(new { error = "Invalid parentId" });
-
-            var registrations = await repo.GetRegistrationsByParentAsync(guid);
-            return Ok(new { registrations });
-        }
-        catch
-        {
-            return StatusCode(500, new { error = "Failed to fetch registrations" });
-        }
+        var registrations = await registrationService.FindByParentAsync(parentId.Value);
+        return Ok(new { registrations });
     }
 
     [HttpGet("all")]
-    public async Task<IActionResult> GetAll()
-    {
-        try
-        {
-            var registrations = await repo.GetAllRegistrationsAsync();
-            return Ok(registrations);
-        }
-        catch
-        {
-            return StatusCode(500, new { error = "Failed to fetch all registrations" });
-        }
-    }
+    public async Task<IActionResult> GetAll() =>
+        Ok(await registrationService.FindAllAsync());
 
     [HttpPost]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.ClassId) || string.IsNullOrWhiteSpace(request.ParentId))
-            return BadRequest(new { error = "classId and parentId are required" });
-
-        try
+        await registrationService.RegisterAsync(request.ClassId!.Value, request.ParentId!.Value);
+        return StatusCode(StatusCodes.Status201Created, new
         {
-            if (!Guid.TryParse(request.ClassId, out var classId) ||
-                !Guid.TryParse(request.ParentId, out var parentId))
-                return BadRequest(new { error = "Invalid classId or parentId" });
-
-            if (!await repo.ParentExistsAsync(parentId))
-                return NotFound(new { error = "Parent not found" });
-
-            var result = await repo.RegisterWithLockAsync(classId, parentId);
-            return result switch
-            {
-                "class_not_found" => NotFound(new { error = "Class not found" }),
-                "class_full" => Conflict(new { error = "Class is full" }),
-                _ => StatusCode(201, new { status = "registered", message = "Successfully registered for class" }),
-            };
-        }
-        catch
-        {
-            return StatusCode(500, new { error = "Failed to register" });
-        }
+            status = "registered",
+            message = "Successfully registered for class"
+        });
     }
 
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> Cancel(string id)
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Cancel(Guid id)
     {
-        try
-        {
-            if (!Guid.TryParse(id, out var guid))
-                return BadRequest(new { error = "Invalid registration id" });
-
-            var cancelled = await repo.CancelRegistrationAsync(guid);
-            if (!cancelled)
-                return NotFound(new { error = "Registration not found" });
-            return Ok(new { message = "Registration cancelled" });
-        }
-        catch
-        {
-            return StatusCode(500, new { error = "Failed to cancel registration" });
-        }
+        await registrationService.CancelAsync(id);
+        return Ok(new { message = "Registration cancelled" });
     }
 }

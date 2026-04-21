@@ -84,7 +84,7 @@ public class RegistrationsTests
         var parentId = Guid.NewGuid();
         var repo = CreateMockRepo();
         repo.ParentExistsAsync(parentId).Returns(true);
-        repo.RegisterWithLockAsync(classId, parentId).Returns("class_not_found");
+        repo.RegisterWithLockAsync(classId, parentId).Returns(RegisterOutcome.ClassNotFound);
         await using var factory = new TestWebAppFactory(repo);
         var client = factory.CreateClient();
 
@@ -101,7 +101,7 @@ public class RegistrationsTests
         var parentId = Guid.NewGuid();
         var repo = CreateMockRepo();
         repo.ParentExistsAsync(parentId).Returns(true);
-        repo.RegisterWithLockAsync(classId, parentId).Returns("ok");
+        repo.RegisterWithLockAsync(classId, parentId).Returns(RegisterOutcome.Registered);
         await using var factory = new TestWebAppFactory(repo);
         var client = factory.CreateClient();
 
@@ -121,7 +121,7 @@ public class RegistrationsTests
         var parentId = Guid.NewGuid();
         var repo = CreateMockRepo();
         repo.ParentExistsAsync(parentId).Returns(true);
-        repo.RegisterWithLockAsync(classId, parentId).Returns("class_full");
+        repo.RegisterWithLockAsync(classId, parentId).Returns(RegisterOutcome.ClassFull);
         await using var factory = new TestWebAppFactory(repo);
         var client = factory.CreateClient();
 

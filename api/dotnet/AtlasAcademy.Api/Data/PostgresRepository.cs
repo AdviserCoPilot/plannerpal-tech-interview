@@ -85,7 +85,7 @@ public class PostgresRepository : IAtlasRepository
             .ToListAsync();
     }
 
-    public async Task<string> RegisterWithLockAsync(Guid classId, Guid parentId)
+    public async Task<RegisterOutcome> RegisterWithLockAsync(Guid classId, Guid parentId)
     {
         await using var transaction = await _context.Database.BeginTransactionAsync();
 
@@ -93,12 +93,12 @@ public class PostgresRepository : IAtlasRepository
             .FromSqlRaw("SELECT * FROM classes WHERE id = {0} FOR UPDATE", classId)
             .FirstOrDefaultAsync();
         if (cls is null)
-            return "class_not_found";
+            return RegisterOutcome.ClassNotFound;
 
         var count = await _context.Registrations
             .CountAsync(r => r.ClassId == classId && r.Status == "registered");
         if (count >= cls.Capacity)
-            return "class_full";
+            return RegisterOutcome.ClassFull;
 
         var existing = await _context.Registrations
             .FirstOrDefaultAsync(r => r.ClassId == classId && r.ParentId == parentId);
@@ -120,7 +120,7 @@ public class PostgresRepository : IAtlasRepository
 
         await _context.SaveChangesAsync();
         await transaction.CommitAsync();
-        return "ok";
+        return RegisterOutcome.Registered;
     }
 
     public async Task<bool> ParentExistsAsync(Guid id)

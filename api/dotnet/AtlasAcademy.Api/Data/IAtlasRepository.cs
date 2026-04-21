@@ -9,7 +9,7 @@ public interface IAtlasRepository
     Task<ClassEntity?> GetClassByIdAsync(Guid id);
     Task<IEnumerable<Registration>> GetRegistrationsByParentAsync(Guid parentId);
     Task<IEnumerable<AdminRegistration>> GetAllRegistrationsAsync();
-    Task<string> RegisterWithLockAsync(Guid classId, Guid parentId);
+    Task<RegisterOutcome> RegisterWithLockAsync(Guid classId, Guid parentId);
     Task<bool> ParentExistsAsync(Guid id);
     Task<bool> CancelRegistrationAsync(Guid id);
 }

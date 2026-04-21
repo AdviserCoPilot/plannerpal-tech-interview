@@ -1,6 +1,8 @@
 using System.Reflection;
 using System.Text.Json;
 using AtlasAcademy.Api.Data;
+using AtlasAcademy.Api.Middleware;
+using AtlasAcademy.Api.Services;
 using DbUp;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,12 +28,16 @@ var connectionString = ParseConnectionString(databaseUrl);
 builder.Services.AddDbContext<AtlasDbContext>(options =>
     options.UseNpgsql(connectionString));
 builder.Services.AddScoped<IAtlasRepository, PostgresRepository>();
+builder.Services.AddScoped<IClassService, ClassService>();
+builder.Services.AddScoped<IRegistrationService, RegistrationService>();
+builder.Services.AddScoped<IParentService, ParentService>();
 
 var port = Environment.GetEnvironmentVariable("PORT") ?? "4000";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 var app = builder.Build();
 
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseCors();
 app.MapControllers();
 app.Run();
@@ -41,7 +47,6 @@ static string ParseConnectionString(string? url)
     if (string.IsNullOrEmpty(url))
         return "Host=localhost;Port=5432;Database=atlas_academy;Username=atlas;Password=atlas";
 
-    // Parse postgresql://user:pass@host:port/db
     var uri = new Uri(url.Replace("postgresql://", "http://"));
     var userInfo = uri.UserInfo.Split(':', 2);
     if (userInfo.Length < 2)

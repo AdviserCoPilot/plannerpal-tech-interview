@@ -1,9 +1,9 @@
 package com.atlas.academy;
 
 import com.atlas.academy.controller.ClassController;
-import com.atlas.academy.model.ClassEntity;
-import com.atlas.academy.repository.ClassJpaRepository;
-import com.atlas.academy.repository.RegistrationJpaRepository;
+import com.atlas.academy.exception.NotFoundException;
+import com.atlas.academy.model.ClassDto;
+import com.atlas.academy.service.ClassService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -12,12 +12,12 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ClassController.class)
 class ClassControllerTest {
@@ -26,28 +26,19 @@ class ClassControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private ClassJpaRepository classRepo;
+    private ClassService classService;
 
-    @MockitoBean
-    private RegistrationJpaRepository registrationRepo;
-
-    private ClassEntity sampleClass() {
-        return new ClassEntity(
-                UUID.randomUUID(),
-                "Yoga 101",
-                "Beginner yoga",
-                20,
-                OffsetDateTime.now(),
-                OffsetDateTime.now().plusHours(1),
-                OffsetDateTime.now()
+    private ClassDto sampleDto(String name, int capacity, long registeredCount) {
+        return new ClassDto(
+                UUID.randomUUID(), name, "Beginner yoga", capacity,
+                OffsetDateTime.now(), OffsetDateTime.now().plusHours(1), OffsetDateTime.now(),
+                registeredCount
         );
     }
 
     @Test
     void listClasses() throws Exception {
-        ClassEntity cls = sampleClass();
-        when(classRepo.findAllByOrderByStartTimeAsc()).thenReturn(List.of(cls));
-        when(registrationRepo.countRegisteredGroupedByClassId()).thenReturn(List.<Object[]>of(new Object[]{cls.getId(), 5L}));
+        when(classService.list()).thenReturn(List.of(sampleDto("Yoga 101", 20, 5)));
 
         mockMvc.perform(get("/classes"))
                 .andExpect(status().isOk())
@@ -58,11 +49,10 @@ class ClassControllerTest {
 
     @Test
     void getClassById() throws Exception {
-        ClassEntity cls = sampleClass();
-        when(classRepo.findById(cls.getId())).thenReturn(Optional.of(cls));
-        when(registrationRepo.countByClassEntityIdAndStatus(cls.getId(), "registered")).thenReturn(0L);
+        ClassDto dto = sampleDto("Yoga 101", 20, 0);
+        when(classService.findById(dto.id())).thenReturn(dto);
 
-        mockMvc.perform(get("/classes/" + cls.getId()))
+        mockMvc.perform(get("/classes/" + dto.id()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Yoga 101"));
     }
@@ -70,7 +60,7 @@ class ClassControllerTest {
     @Test
     void getClassNotFound() throws Exception {
         UUID id = UUID.randomUUID();
-        when(classRepo.findById(id)).thenReturn(Optional.empty());
+        when(classService.findById(id)).thenThrow(new NotFoundException("Class not found"));
 
         mockMvc.perform(get("/classes/" + id))
                 .andExpect(status().isNotFound())

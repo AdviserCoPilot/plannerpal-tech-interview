@@ -1,119 +1,39 @@
 import { Router } from "express";
-import db from "../db";
+import { parentIdQuerySchema, registerSchema } from "../schemas";
+import * as registrationService from "../services/registrationService";
+import { asyncHandler } from "../util/asyncHandler";
 
 export const registrationsRouter = Router();
 
-registrationsRouter.get("/", async (req, res) => {
-  try {
-    const { parentId } = req.query;
-    if (!parentId) {
-      return res.status(400).json({ error: "parentId required" });
-    }
-    const registrations = await db("registrations as r")
-      .select("r.id", "r.class_id", "r.status", "c.name as class_name")
-      .join("classes as c", "c.id", "r.class_id")
-      .where("r.parent_id", parentId as string)
-      .andWhere("r.status", "registered")
-      .orderBy("c.start_time");
+registrationsRouter.get(
+  "/",
+  asyncHandler(async (req, res) => {
+    const { parentId } = parentIdQuerySchema.parse(req.query);
+    const registrations = await registrationService.findByParent(parentId);
     res.json({ registrations });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to fetch registrations" });
-  }
-});
+  })
+);
 
-registrationsRouter.get("/all", async (_req, res) => {
-  try {
-    const rows = await db("registrations as r")
-      .select(
-        "r.id",
-        "r.class_id",
-        "c.name as class_name",
-        "p.name as parent_name",
-        "p.email as parent_email",
-        "r.created_at"
-      )
-      .join("classes as c", "c.id", "r.class_id")
-      .join("parents as p", "p.id", "r.parent_id")
-      .where("r.status", "registered")
-      .orderBy("c.start_time")
-      .orderBy("p.name");
-    res.json(rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to fetch all registrations" });
-  }
-});
+registrationsRouter.get(
+  "/all",
+  asyncHandler(async (_req, res) => {
+    res.json(await registrationService.findAll());
+  })
+);
 
-registrationsRouter.post("/", async (req, res) => {
-  try {
-    const { classId, parentId } = req.body;
-    if (!classId || !parentId) {
-      return res.status(400).json({ error: "classId and parentId required" });
-    }
+registrationsRouter.post(
+  "/",
+  asyncHandler(async (req, res) => {
+    const { classId, parentId } = registerSchema.parse(req.body);
+    const result = await registrationService.register(classId, parentId);
+    res.status(201).json(result);
+  })
+);
 
-    const result = await db.transaction(async (trx) => {
-      const classRow = await trx("classes")
-        .select("capacity")
-        .where("id", classId)
-        .forUpdate()
-        .first();
-      if (!classRow) {
-        return { status: 404, body: { error: "Class not found" } };
-      }
-      const capacity = Number(classRow.capacity);
-
-      const countResult = await trx("registrations")
-        .count("* as count")
-        .where("class_id", classId)
-        .andWhere("status", "registered")
-        .first();
-      const registeredCount = countResult ? Number((countResult as any).count) : 0;
-
-      if (registeredCount >= capacity) {
-        return { status: 409, body: { error: "Class is full" } };
-      }
-
-      await trx("registrations")
-        .insert({
-          class_id: classId,
-          parent_id: parentId,
-          status: "registered",
-        })
-        .onConflict(["class_id", "parent_id"])
-        .merge({ status: "registered" });
-
-      return {
-        status: 201,
-        body: { status: "registered", message: "Successfully registered for class" },
-      };
-    });
-    res.status(result.status).json(result.body);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to register" });
-  }
-});
-
-registrationsRouter.delete("/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const reg = await db("registrations")
-      .select("*")
-      .where("id", id)
-      .andWhere("status", "registered")
-      .first();
-    if (!reg) {
-      return res.status(404).json({ error: "Registration not found" });
-    }
-
-    await db("registrations")
-      .where("id", id)
-      .update({ status: "cancelled" });
-
+registrationsRouter.delete(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    await registrationService.cancel(req.params.id);
     res.json({ message: "Registration cancelled" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to cancel" });
-  }
-});
+  })
+);

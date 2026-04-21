@@ -1,16 +1,12 @@
 import { Router } from "express";
-import db from "../db";
+import * as parentService from "../services/parentService";
+import { asyncHandler } from "../util/asyncHandler";
 
 export const parentsRouter = Router();
 
-parentsRouter.get("/", async (_req, res) => {
-  try {
-    const parents = await db("parents")
-      .select("id", "email", "name")
-      .orderBy("name");
-    res.json(parents);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to fetch parents" });
-  }
-});
+parentsRouter.get(
+  "/",
+  asyncHandler(async (_req, res) => {
+    res.json(await parentService.listParents());
+  })
+);

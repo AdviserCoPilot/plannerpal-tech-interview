@@ -1,13 +1,14 @@
 class ApplicationController < ActionController::API
-  rescue_from ActiveRecord::RecordNotFound, with: :render_not_found
+  rescue_from ApiError, with: :render_api_error
+  rescue_from ActiveRecord::RecordNotFound, with: :render_record_not_found
 
   private
 
-  def render_error(message, status)
-    render json: { error: message }, status: status
+  def render_api_error(exception)
+    render json: { error: exception.message }, status: exception.status
   end
 
-  def render_not_found(exception = nil)
-    render_error(exception&.message || "Not found", :not_found)
+  def render_record_not_found(exception)
+    render json: { error: exception.message || "Not found" }, status: :not_found
   end
 end

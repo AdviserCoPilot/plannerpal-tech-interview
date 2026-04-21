@@ -1,12 +1,21 @@
 package com.atlas.academy.controller;
 
-import com.atlas.academy.model.*;
-import com.atlas.academy.repository.ClassJpaRepository;
-import com.atlas.academy.repository.ParentJpaRepository;
-import com.atlas.academy.repository.RegistrationJpaRepository;
-import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.*;
+import com.atlas.academy.model.AdminRegistration;
+import com.atlas.academy.model.RegisterRequest;
+import com.atlas.academy.model.RegistrationDto;
+import com.atlas.academy.model.RegistrationResult;
+import com.atlas.academy.service.RegistrationService;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
@@ -16,138 +25,31 @@ import java.util.UUID;
 @RequestMapping("/registrations")
 public class RegistrationController {
 
-    private final RegistrationJpaRepository registrationRepo;
-    private final ClassJpaRepository classRepo;
-    private final ParentJpaRepository parentRepo;
+    private final RegistrationService registrationService;
 
-    public RegistrationController(RegistrationJpaRepository registrationRepo,
-                                  ClassJpaRepository classRepo,
-                                  ParentJpaRepository parentRepo) {
-        this.registrationRepo = registrationRepo;
-        this.classRepo = classRepo;
-        this.parentRepo = parentRepo;
+    public RegistrationController(RegistrationService registrationService) {
+        this.registrationService = registrationService;
     }
 
     @GetMapping
-    public ResponseEntity<?> getByParent(@RequestParam(required = false) String parentId) {
-        if (parentId == null || parentId.isBlank()) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "parentId is required"));
-        }
-        try {
-            UUID uuid = UUID.fromString(parentId);
-            List<Registration> registrations = registrationRepo.findByParentIdAndStatusRegistered(uuid);
-            List<RegistrationDto> dtos = registrations.stream()
-                    .map(r -> {
-                        var cls = r.getClassEntity();
-                        return new RegistrationDto(
-                                r.getId(),
-                                cls != null ? cls.getId() : null,
-                                r.getStatus(),
-                                cls != null ? cls.getName() : null
-                        );
-                    })
-                    .toList();
-            return ResponseEntity.ok(Map.of("registrations", dtos));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Invalid parentId"));
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError()
-                    .body(Map.of("error", "Failed to fetch registrations"));
-        }
+    public Map<String, List<RegistrationDto>> getByParent(@RequestParam UUID parentId) {
+        return Map.of("registrations", registrationService.findByParent(parentId));
     }
 
     @GetMapping("/all")
-    public ResponseEntity<?> getAll() {
-        try {
-            List<Registration> registrations = registrationRepo.findAllRegisteredWithDetails();
-            List<AdminRegistration> dtos = registrations.stream()
-                    .map(r -> new AdminRegistration(
-                            r.getId(),
-                            r.getClassEntity().getId(),
-                            r.getClassEntity().getName(),
-                            r.getParent().getName(),
-                            r.getParent().getEmail(),
-                            r.getCreatedAt()
-                    ))
-                    .toList();
-            return ResponseEntity.ok(dtos);
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError()
-                    .body(Map.of("error", "Failed to fetch all registrations"));
-        }
+    public List<AdminRegistration> getAll() {
+        return registrationService.findAll();
     }
 
     @PostMapping
-    @Transactional
-    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
-        if (request.classId() == null || request.classId().isBlank()
-                || request.parentId() == null || request.parentId().isBlank()) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "classId and parentId are required"));
-        }
-
-        try {
-            UUID classId = UUID.fromString(request.classId());
-            UUID parentId = UUID.fromString(request.parentId());
-
-            ClassEntity classEntity = classRepo.findByIdForUpdate(classId);
-            if (classEntity == null) {
-                return ResponseEntity.status(404)
-                        .body(Map.of("error", "Class not found"));
-            }
-            Integer capacity = classEntity.getCapacity() != null ? classEntity.getCapacity() : 0;
-
-            long currentCount = registrationRepo.countByClassEntityIdAndStatus(classId, "registered");
-            if (currentCount >= capacity) {
-                return ResponseEntity.status(409)
-                        .body(Map.of("error", "Class is full"));
-            }
-
-            // Upsert: find existing or create new
-            Registration existing = registrationRepo.findByClassIdAndParentId(classId, parentId);
-            if (existing != null) {
-                existing.setStatus("registered");
-                registrationRepo.save(existing);
-            } else {
-                Registration reg = new Registration();
-                reg.setClassEntity(classRepo.getReferenceById(classId));
-                reg.setParent(parentRepo.getReferenceById(parentId));
-                reg.setStatus("registered");
-                registrationRepo.save(reg);
-            }
-
-            return ResponseEntity.status(201)
-                    .body(Map.of("status", "registered", "message", "Successfully registered for class"));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Invalid classId or parentId"));
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError()
-                    .body(Map.of("error", "Failed to register"));
-        }
+    @ResponseStatus(HttpStatus.CREATED)
+    public RegistrationResult register(@Valid @RequestBody RegisterRequest request) {
+        return registrationService.register(request.classId(), request.parentId());
     }
 
     @DeleteMapping("/{id}")
-    @Transactional
-    public ResponseEntity<?> cancel(@PathVariable String id) {
-        try {
-            UUID uuid = UUID.fromString(id);
-            Registration reg = registrationRepo.findById(uuid).orElse(null);
-            if (reg == null || !"registered".equals(reg.getStatus())) {
-                return ResponseEntity.status(404)
-                        .body(Map.of("error", "Registration not found"));
-            }
-            reg.setStatus("cancelled");
-            registrationRepo.save(reg);
-            return ResponseEntity.ok(Map.of("message", "Registration cancelled"));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Invalid registration id"));
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError()
-                    .body(Map.of("error", "Failed to cancel registration"));
-        }
+    public Map<String, String> cancel(@PathVariable UUID id) {
+        registrationService.cancel(id);
+        return Map.of("message", "Registration cancelled");
     }
 }

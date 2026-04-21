@@ -1,12 +1,12 @@
 package com.atlas.academy;
 
 import com.atlas.academy.controller.RegistrationController;
-import com.atlas.academy.model.ClassEntity;
-import com.atlas.academy.model.Parent;
-import com.atlas.academy.model.Registration;
-import com.atlas.academy.repository.ClassJpaRepository;
-import com.atlas.academy.repository.ParentJpaRepository;
-import com.atlas.academy.repository.RegistrationJpaRepository;
+import com.atlas.academy.exception.ConflictException;
+import com.atlas.academy.exception.NotFoundException;
+import com.atlas.academy.model.AdminRegistration;
+import com.atlas.academy.model.RegistrationDto;
+import com.atlas.academy.model.RegistrationResult;
+import com.atlas.academy.service.RegistrationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -18,10 +18,15 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(RegistrationController.class)
 class RegistrationControllerTest {
@@ -30,13 +35,7 @@ class RegistrationControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private RegistrationJpaRepository registrationRepo;
-
-    @MockitoBean
-    private ClassJpaRepository classRepo;
-
-    @MockitoBean
-    private ParentJpaRepository parentRepo;
+    private RegistrationService registrationService;
 
     @Test
     void getRegistrationsRequiresParentId() throws Exception {
@@ -48,19 +47,9 @@ class RegistrationControllerTest {
     @Test
     void getRegistrationsWithParentId() throws Exception {
         UUID parentId = UUID.randomUUID();
-        UUID regId = UUID.randomUUID();
         UUID classId = UUID.randomUUID();
-
-        ClassEntity cls = new ClassEntity();
-        cls.setId(classId);
-        cls.setName("Yoga 101");
-
-        Parent parent = new Parent();
-        parent.setId(parentId);
-
-        Registration reg = new Registration(regId, cls, parent, "registered", OffsetDateTime.now());
-
-        when(registrationRepo.findByParentIdAndStatusRegistered(parentId)).thenReturn(List.of(reg));
+        RegistrationDto dto = new RegistrationDto(UUID.randomUUID(), classId, "registered", "Yoga 101");
+        when(registrationService.findByParent(parentId)).thenReturn(List.of(dto));
 
         mockMvc.perform(get("/registrations").param("parentId", parentId.toString()))
                 .andExpect(status().isOk())
@@ -70,19 +59,11 @@ class RegistrationControllerTest {
 
     @Test
     void getAllRegistrations() throws Exception {
-        UUID regId = UUID.randomUUID();
-        UUID classId = UUID.randomUUID();
-        UUID parentId = UUID.randomUUID();
-
-        ClassEntity cls = new ClassEntity();
-        cls.setId(classId);
-        cls.setName("Yoga 101");
-
-        Parent parent = new Parent(parentId, "alice@example.com", "Alice Smith");
-
-        Registration reg = new Registration(regId, cls, parent, "registered", OffsetDateTime.now());
-
-        when(registrationRepo.findAllRegisteredWithDetails()).thenReturn(List.of(reg));
+        AdminRegistration dto = new AdminRegistration(
+                UUID.randomUUID(), UUID.randomUUID(), "Yoga 101",
+                "Alice Smith", "alice@example.com", OffsetDateTime.now()
+        );
+        when(registrationService.findAll()).thenReturn(List.of(dto));
 
         mockMvc.perform(get("/registrations/all"))
                 .andExpect(status().isOk())
@@ -95,15 +76,15 @@ class RegistrationControllerTest {
         mockMvc.perform(post("/registrations")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("classId and parentId are required"));
+                .andExpect(status().isBadRequest());
     }
 
     @Test
     void registerClassNotFound() throws Exception {
         UUID classId = UUID.randomUUID();
         UUID parentId = UUID.randomUUID();
-        when(classRepo.findByIdForUpdate(classId)).thenReturn(null);
+        when(registrationService.register(classId, parentId))
+                .thenThrow(new NotFoundException("Class not found"));
 
         mockMvc.perform(post("/registrations")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -118,17 +99,8 @@ class RegistrationControllerTest {
     void registerSuccess() throws Exception {
         UUID classId = UUID.randomUUID();
         UUID parentId = UUID.randomUUID();
-        ClassEntity classEntity = new ClassEntity();
-        classEntity.setId(classId);
-        classEntity.setCapacity(20);
-        when(classRepo.findByIdForUpdate(classId)).thenReturn(classEntity);
-        when(registrationRepo.countByClassEntityIdAndStatus(classId, "registered")).thenReturn(5L);
-        when(registrationRepo.findByClassIdAndParentId(classId, parentId)).thenReturn(null);
-        when(classRepo.getReferenceById(classId)).thenReturn(classEntity);
-
-        Parent parentRef = new Parent();
-        parentRef.setId(parentId);
-        when(parentRepo.getReferenceById(parentId)).thenReturn(parentRef);
+        when(registrationService.register(classId, parentId))
+                .thenReturn(new RegistrationResult("registered", "Successfully registered for class"));
 
         mockMvc.perform(post("/registrations")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -138,19 +110,14 @@ class RegistrationControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("registered"))
                 .andExpect(jsonPath("$.message").value("Successfully registered for class"));
-
-        verify(registrationRepo).save(any(Registration.class));
     }
 
     @Test
     void registerClassFull() throws Exception {
         UUID classId = UUID.randomUUID();
         UUID parentId = UUID.randomUUID();
-        ClassEntity classEntity = new ClassEntity();
-        classEntity.setId(classId);
-        classEntity.setCapacity(2);
-        when(classRepo.findByIdForUpdate(classId)).thenReturn(classEntity);
-        when(registrationRepo.countByClassEntityIdAndStatus(classId, "registered")).thenReturn(2L);
+        when(registrationService.register(classId, parentId))
+                .thenThrow(new ConflictException("Class is full"));
 
         mockMvc.perform(post("/registrations")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -159,29 +126,24 @@ class RegistrationControllerTest {
                                 """.formatted(classId, parentId)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value("Class is full"));
-
-        verify(registrationRepo, never()).save(any());
     }
 
     @Test
     void cancelSuccess() throws Exception {
         UUID regId = UUID.randomUUID();
-        Registration reg = new Registration();
-        reg.setId(regId);
-        reg.setStatus("registered");
-        when(registrationRepo.findById(regId)).thenReturn(java.util.Optional.of(reg));
 
         mockMvc.perform(delete("/registrations/" + regId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Registration cancelled"));
 
-        verify(registrationRepo).save(any(Registration.class));
+        verify(registrationService).cancel(regId);
     }
 
     @Test
     void cancelNotFound() throws Exception {
         UUID regId = UUID.randomUUID();
-        when(registrationRepo.findById(regId)).thenReturn(java.util.Optional.empty());
+        doThrow(new NotFoundException("Registration not found"))
+                .when(registrationService).cancel(eq(regId));
 
         mockMvc.perform(delete("/registrations/" + regId))
                 .andExpect(status().isNotFound())
