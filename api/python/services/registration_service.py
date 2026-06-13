@@ -83,7 +83,7 @@ def register(db: Session, class_id: UUID, parent_id: UUID) -> dict:
             )
             .scalar()
         )
-        if registered_count >= cls.capacity:
+        if registered_count > cls.capacity:
             raise ConflictError("Class is full")
 
         existing = (
