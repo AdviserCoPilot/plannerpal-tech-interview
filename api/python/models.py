@@ -45,6 +45,8 @@ class Class(Base):
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default="now()"
     )
+    instructor_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    location: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     registrations: Mapped[list["Registration"]] = relationship(
         back_populates="class_"
