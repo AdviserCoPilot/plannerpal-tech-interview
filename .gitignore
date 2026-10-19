@@ -1,0 +1,75 @@
+# Node
+node_modules/
+.next/
+dist/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn/
+.pnp.*
+*.tsbuildinfo
+.eslintcache
+coverage/
+
+# Environment
+.env
+.envrc
+
+# OS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[codz]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+eggs/
+.eggs/
+*.egg-info/
+*.egg
+.installed.cfg
+MANIFEST
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+.hypothesis/
+.venv/
+venv/
+ENV/
+
+# .NET
+bin/
+obj/
+!api/ruby/bin/
+
+# Java / Gradle
+.gradle/
+api/java/build/
+!api/java/gradle/wrapper/gradle-wrapper.jar
+*.class
+*.jar
+!gradle/wrapper/*.jar
+
+# IDE
+.vscode/
+.idea/
+.cursorignore
+.cursorindexingignore
+
+# Ruff
+.ruff_cache/
+
+# Worktrees
+.worktrees/
+
+# Docs
+docs/
