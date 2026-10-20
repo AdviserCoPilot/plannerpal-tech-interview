@@ -22,6 +22,26 @@ class RegisterRequest(CamelModel):
     parent_id: UUID = Field(alias="parentId")
 
 
+class CreateClassRequest(CamelModel):
+    name: str
+    description: str | None = None
+    capacity: int
+    start_time: str = Field(alias="startTime")
+    end_time: str = Field(alias="endTime")
+    instructor_name: str | None = Field(default=None, alias="instructorName")
+    location: str | None = None
+
+
+class UpdateClassRequest(CamelModel):
+    name: str | None = None
+    description: str | None = None
+    capacity: int | None = None
+    start_time: str | None = Field(default=None, alias="startTime")
+    end_time: str | None = Field(default=None, alias="endTime")
+    instructor_name: str | None = Field(default=None, alias="instructorName")
+    location: str | None = None
+
+
 class ClassResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -33,6 +53,18 @@ class ClassResponse(BaseModel):
     end_time: datetime
     created_at: datetime
     registered_count: int
+    instructor_name: str | None = None
+    location: str | None = None
+
+
+class RegisteredParent(BaseModel):
+    id: UUID
+    parentName: str
+    email: str
+
+
+class ClassDetailResponse(ClassResponse):
+    registered_parents: list[RegisteredParent] = []
 
 
 class RegistrationSummary(BaseModel):
